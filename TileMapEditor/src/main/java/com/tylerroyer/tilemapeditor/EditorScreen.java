@@ -83,7 +83,7 @@ public class EditorScreen extends Screen {
         if (isMouseOverMap() && isMouseInViewport()) {
             g.setColor(new Color(255, 255, 255, 100));
             double scaledTileSize = getTileSize();
-            g.fillRect(hoveredTileLocation.getX() * scaledTileSize + MAP_OFFSET_X, hoveredTileLocation.getY() * scaledTileSize + MAP_OFFSET_Y, scaledTileSize, scaledTileSize);
+            g.fillRect(hoveredTileLocation.getX() * scaledTileSize + MAP_OFFSET_X + camera.getOffsetX(), hoveredTileLocation.getY() * scaledTileSize + MAP_OFFSET_Y + camera.getOffsetY(), scaledTileSize, scaledTileSize);
         }
 
         g.clearClip();
@@ -152,8 +152,8 @@ public class EditorScreen extends Screen {
 
         mouseRelativeToMap.x = (Game.getMouseHandler().getX() - MAP_OFFSET_X);
         mouseRelativeToMap.y = (Game.getMouseHandler().getY() - MAP_OFFSET_Y);
-        hoveredTileLocation.x = mouseRelativeToMap.x / (int) getTileSize();
-        hoveredTileLocation.y = mouseRelativeToMap.y / (int) getTileSize();
+        hoveredTileLocation.x = (int) ((mouseRelativeToMap.x - camera.getOffsetX()) / (int) getTileSize());
+        hoveredTileLocation.y = (int) ((mouseRelativeToMap.y - camera.getOffsetY()) / (int) getTileSize());
 
         boolean isMouseDown = Game.getMouseHandler().isDown();
         showTileInfo = !isMouseDown;

@@ -1,7 +1,7 @@
 package com.tylerroyer.tilemapeditor;
 
 public class Camera {
-    double offsetX = 0.0, offsetY = 0.0;
+    private double offsetX = 0.0, offsetY = 0.0;
     public Camera() {}
 
     public double getOffsetX() {
