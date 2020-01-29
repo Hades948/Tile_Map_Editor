@@ -2,6 +2,7 @@ package com.tylerroyer.tilemapeditor;
 
 import java.awt.BasicStroke;
 import java.awt.Color;
+import java.awt.Cursor;
 import java.awt.Font;
 import java.awt.image.BufferedImage;
 import java.awt.Point;
@@ -16,12 +17,16 @@ import com.tylerroyer.molasses.events.IncrementIntegerEvent;
 import org.apache.commons.lang3.mutable.MutableInt;
 
 public class EditorScreen extends Screen {
-    private TileMap tileMap;
-    private MutableInt zoom = new MutableInt(2);
+    private boolean showTileInfo;
+    private boolean wasMouseDown = false;
     private double[] zoomLevels = {0.125, 0.25, 0.5, 1.0, 2.0};
     private Point mouseRelativeToMap = new Point();
     private Point hoveredTileLocation = new Point();
+    private Point clickDownPoint = new Point();
     private Color backgroundColor = new Color(190, 205, 190);
+    private MutableInt zoom = new MutableInt(2);
+    private TileMap tileMap;
+    private Camera camera = new Camera();
 
     private final int MAP_OFFSET_X = 18, MAP_OFFSET_Y = 18;
     private final int MAP_VIEWPORT_SIZE = 640;
@@ -70,12 +75,12 @@ public class EditorScreen extends Screen {
             for (int j = 0; j < tileMap.getTiles().get(i).size(); j++) {
                 t = tileMap.getTiles().get(i).get(j);
                 BufferedImage image = Resources.getGraphicalResource(t.getImageName() + "_zoom" + zoom);
-                g.drawImage(image, i * getTileSize() + MAP_OFFSET_X, j * getTileSize() + MAP_OFFSET_Y, Game.getWindow());
+                g.drawImage(image, i * getTileSize() + MAP_OFFSET_X + camera.getOffsetX(), j * getTileSize() + MAP_OFFSET_Y + camera.getOffsetY(), Game.getWindow());
             }
         }
 
         // Draw selector
-        if (isMouseInViewport()) {
+        if (isMouseOverMap() && isMouseInViewport()) {
             g.setColor(new Color(255, 255, 255, 100));
             double scaledTileSize = getTileSize();
             g.fillRect(hoveredTileLocation.getX() * scaledTileSize + MAP_OFFSET_X, hoveredTileLocation.getY() * scaledTileSize + MAP_OFFSET_Y, scaledTileSize, scaledTileSize);
@@ -98,7 +103,7 @@ public class EditorScreen extends Screen {
         zoomOutButton.render(g);
 
         // Draw tile info
-        if (isMouseInViewport()) {
+        if (isMouseOverMap() && isMouseInViewport() && showTileInfo) {
             int infoX = Game.getMouseHandler().getX() + 20, infoY = Game.getMouseHandler().getY() + 20;
             if (mouseRelativeToMap.x > 444) {
                 infoX = Game.getMouseHandler().getX() - 20 - 192;
@@ -129,6 +134,13 @@ public class EditorScreen extends Screen {
         return mouseRelativeToMap.x > 0 && mouseRelativeToMap.y > 0 && mouseRelativeToMap.x < MAP_VIEWPORT_SIZE && mouseRelativeToMap.y < MAP_VIEWPORT_SIZE;
     }
 
+    private boolean isMouseOverMap() {
+        return mouseRelativeToMap.x - camera.getOffsetX() > 0
+            && mouseRelativeToMap.y - camera.getOffsetY() > 0
+            && mouseRelativeToMap.x - camera.getOffsetX() < getTileSize() * tileMap.getTiles().size()
+            && mouseRelativeToMap.y - camera.getOffsetY() < getTileSize() * tileMap.getTiles().get(0).size();
+    }
+
     private double getTileSize() {
         return Resources.getResourceSize("grass.png").getWidth() * zoomLevels[zoom.getValue() - 1];
     }
@@ -142,5 +154,29 @@ public class EditorScreen extends Screen {
         mouseRelativeToMap.y = (Game.getMouseHandler().getY() - MAP_OFFSET_Y);
         hoveredTileLocation.x = mouseRelativeToMap.x / (int) getTileSize();
         hoveredTileLocation.y = mouseRelativeToMap.y / (int) getTileSize();
+
+        boolean isMouseDown = Game.getMouseHandler().isDown();
+        showTileInfo = !isMouseDown;
+        if (isMouseDown) {
+            if (isMouseInViewport()) {
+                Game.getWindow().setCursor(Cursor.getPredefinedCursor(Cursor.MOVE_CURSOR));
+
+                if (!wasMouseDown) {
+                    // Just clicked down.
+                    clickDownPoint.x = (int) (Game.getMouseHandler().getX() - camera.getOffsetX());
+                    clickDownPoint.y = (int) (Game.getMouseHandler().getY() - camera.getOffsetY());
+                } else {
+                    Point mouseNow = new Point(Game.getMouseHandler().getX(), Game.getMouseHandler().getY());
+                
+                    camera.setOffsetX(mouseNow.getX() - clickDownPoint.getX());
+                    camera.setOffsetY(mouseNow.getY() - clickDownPoint.getY());
+                }
+
+                wasMouseDown = true;
+            }
+        } else {
+            Game.getWindow().setCursor(Cursor.getDefaultCursor());
+            wasMouseDown = false;
+        }
     }
 }
