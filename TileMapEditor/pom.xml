@@ -26,9 +26,14 @@
       <scope>test</scope>
     </dependency>
     <dependency>
+        <groupId>org.apache.commons</groupId>
+        <artifactId>commons-lang3</artifactId>
+        <version>3.9</version>
+    </dependency>
+    <dependency>
       <groupId>com.tylerroyer.molasses</groupId>
       <artifactId>MolassesEngine</artifactId>
-      <version>0.2.5</version>
+      <version>0.2.10</version>
     </dependency>
   </dependencies>
 
