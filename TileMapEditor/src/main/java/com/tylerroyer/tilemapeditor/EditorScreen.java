@@ -17,13 +17,13 @@ import org.apache.commons.lang3.mutable.MutableInt;
 
 public class EditorScreen extends Screen {
     private TileMap tileMap;
-    private MutableInt zoom = new MutableInt(4);
+    private MutableInt zoom = new MutableInt(2);
     private double[] zoomLevels = {0.125, 0.25, 0.5, 1.0, 2.0};
     private Point mouseRelativeToMap = new Point();
     private Point hoveredTileLocation = new Point();
     private Color backgroundColor = new Color(190, 205, 190);
 
-    private final int MAP_OFFSET_X = 738, MAP_OFFSET_Y = 18;
+    private final int MAP_OFFSET_X = 18, MAP_OFFSET_Y = 18;
     private final int MAP_VIEWPORT_SIZE = 640;
     private final int BOARDER_WIDTH = 2;
 
@@ -88,7 +88,7 @@ public class EditorScreen extends Screen {
         // Draw zoom level
         g.setFont(new Font("Helvetica", Font.PLAIN, 42));
         g.setColor(Color.BLACK);
-        g.drawString("Zoom: " + zoom.getValue(), MAP_OFFSET_X, MAP_OFFSET_Y + MAP_VIEWPORT_SIZE + 60);
+        g.drawString("Zoom: " + zoom.getValue(), MAP_OFFSET_X + 20, MAP_OFFSET_Y + MAP_VIEWPORT_SIZE + 60);
 
         // Draw buttons
         zoomInButton.render(g);
