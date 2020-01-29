@@ -8,6 +8,7 @@ import java.awt.image.BufferedImage;
 import java.awt.Point;
 import java.awt.Rectangle;
 import java.util.ArrayList;
+import java.util.Random;
 
 import com.tylerroyer.molasses.*;
 import com.tylerroyer.molasses.events.DecrementIntegerEvent;
@@ -19,12 +20,12 @@ import org.apache.commons.lang3.mutable.MutableInt;
 public class EditorScreen extends Screen {
     private boolean showTileInfo;
     private boolean wasMouseDown = false;
-    private double[] zoomLevels = {0.125, 0.25, 0.5, 1.0, 2.0};
+    private double[] zoomLevels = {0.03125, 0.0625, 0.125, 0.25};
     private Point mouseRelativeToMap = new Point();
     private Point hoveredTileLocation = new Point();
     private Point clickDownPoint = new Point();
     private Color backgroundColor = new Color(190, 205, 190);
-    private MutableInt zoom = new MutableInt(2);
+    private MutableInt zoom = new MutableInt(3);
     private TileMap tileMap;
     private Camera camera = new Camera();
 
@@ -42,15 +43,27 @@ public class EditorScreen extends Screen {
     @Override
     public void loadResources() {
         Resources.loadGraphicalImage("grass.png");
-        Resources.addGraphicalResource("grass.png_zoom1", Resources.scaleImage(Resources.getGraphicalResource("grass.png"), zoomLevels[0], zoomLevels[0]));
-        Resources.addGraphicalResource("grass.png_zoom2", Resources.scaleImage(Resources.getGraphicalResource("grass.png"), zoomLevels[1], zoomLevels[1]));
-        Resources.addGraphicalResource("grass.png_zoom3", Resources.scaleImage(Resources.getGraphicalResource("grass.png"), zoomLevels[2], zoomLevels[2]));
-        Resources.addGraphicalResource("grass.png_zoom4", Resources.scaleImage(Resources.getGraphicalResource("grass.png"), zoomLevels[3], zoomLevels[3]));
-        Resources.addGraphicalResource("grass.png_zoom5", Resources.scaleImage(Resources.getGraphicalResource("grass.png"), zoomLevels[4], zoomLevels[4]));
+        Resources.loadGraphicalImage("water.png");
+        for (int i = 0; i < zoomLevels.length; i++) {
+            Resources.addGraphicalResource("grass.png_zoom" + (i+1), Resources.scaleImage(Resources.getGraphicalResource("grass.png"), zoomLevels[i], zoomLevels[i]));
+            Resources.addGraphicalResource("water.png_zoom" + (i+1), Resources.scaleImage(Resources.getGraphicalResource("water.png"), zoomLevels[i], zoomLevels[i]));
+        }
 
         for (ArrayList<Tile> row : tileMap.getTiles()) {
             for (Tile tile : row) {
                 tile.setImageName("grass.png");
+            }
+        }
+
+        Random rand = new Random();
+        for (int i = 0; i < 5; i++) {
+            int w = rand.nextInt(20) + 10, h = rand.nextInt(20) + 10;
+            int x = rand.nextInt(100 - w), y = rand.nextInt(100 - h);
+            
+            for (int j = x; j < x + w; j++) {
+                for (int k = y; k < y + h; k++) {
+                    tileMap.getTiles().get(j).get(k).setImageName("water.png");
+                }
             }
         }
         
@@ -58,7 +71,7 @@ public class EditorScreen extends Screen {
 
         Font font = new Font("Helvetica", Font.PLAIN, 42);
         BasicStroke buttonOutline = new BasicStroke(2);
-        zoomInEvent = new IncrementIntegerEvent(zoom, 1, 5);
+        zoomInEvent = new IncrementIntegerEvent(zoom, 1, zoomLevels.length);
         zoomOutEvent = new DecrementIntegerEvent(zoom, 1, 1);
         zoomInButton = new Button("Zoom in", font, new Color(128, 128, 128), Color.BLACK, 200, 50, MAP_OFFSET_X + MAP_VIEWPORT_SIZE - 420, MAP_OFFSET_Y + MAP_VIEWPORT_SIZE + 20, zoomInEvent);
         zoomOutButton = new Button("Zoom out", font, new Color(128, 128, 128), Color.BLACK, 200, 50, MAP_OFFSET_X + MAP_VIEWPORT_SIZE - 200, MAP_OFFSET_Y + MAP_VIEWPORT_SIZE + 20, zoomOutEvent);
