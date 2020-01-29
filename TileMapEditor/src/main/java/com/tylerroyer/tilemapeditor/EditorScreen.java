@@ -52,10 +52,13 @@ public class EditorScreen extends Screen {
         Game.getWindow().setBackgroundColor(backgroundColor);
 
         Font font = new Font("Helvetica", Font.PLAIN, 42);
+        BasicStroke buttonOutline = new BasicStroke(2);
         zoomInEvent = new IncrementIntegerEvent(zoom, 1, 5);
         zoomOutEvent = new DecrementIntegerEvent(zoom, 1, 1);
         zoomInButton = new Button("Zoom in", font, new Color(128, 128, 128), Color.BLACK, 200, 50, MAP_OFFSET_X + MAP_VIEWPORT_SIZE - 420, MAP_OFFSET_Y + MAP_VIEWPORT_SIZE + 20, zoomInEvent);
         zoomOutButton = new Button("Zoom out", font, new Color(128, 128, 128), Color.BLACK, 200, 50, MAP_OFFSET_X + MAP_VIEWPORT_SIZE - 200, MAP_OFFSET_Y + MAP_VIEWPORT_SIZE + 20, zoomOutEvent);
+        zoomInButton.setOutline(buttonOutline);
+        zoomOutButton.setOutline(buttonOutline);
     }
 
     @Override
