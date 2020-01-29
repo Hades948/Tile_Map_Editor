@@ -18,7 +18,6 @@ import org.apache.commons.lang3.mutable.MutableInt;
 public class EditorScreen extends Screen {
     private TileMap tileMap;
     private MutableInt zoom = new MutableInt(4);
-    private int tileSize;
     private double[] zoomLevels = {0.125, 0.25, 0.5, 1.0, 2.0};
     private Point mouseRelativeToMap = new Point();
     private Point hoveredTileLocation = new Point();
@@ -43,7 +42,6 @@ public class EditorScreen extends Screen {
         Resources.addGraphicalResource("grass.png_zoom3", Resources.scaleImage(Resources.getGraphicalResource("grass.png"), zoomLevels[2], zoomLevels[2]));
         Resources.addGraphicalResource("grass.png_zoom4", Resources.scaleImage(Resources.getGraphicalResource("grass.png"), zoomLevels[3], zoomLevels[3]));
         Resources.addGraphicalResource("grass.png_zoom5", Resources.scaleImage(Resources.getGraphicalResource("grass.png"), zoomLevels[4], zoomLevels[4]));
-        tileSize = Resources.getGraphicalResource("grass.png").getWidth();
 
         for (ArrayList<Tile> row : tileMap.getTiles()) {
             for (Tile tile : row) {
@@ -69,24 +67,18 @@ public class EditorScreen extends Screen {
             for (int j = 0; j < tileMap.getTiles().get(i).size(); j++) {
                 t = tileMap.getTiles().get(i).get(j);
                 BufferedImage image = Resources.getGraphicalResource(t.getImageName() + "_zoom" + zoom);
-                int tileSize = image.getWidth();
-                g.drawImage(image, (int) (i * tileSize * (1 / Resources.scaleX) + MAP_OFFSET_X),
-                        (int) (j * tileSize * (1 / Resources.scaleY) + MAP_OFFSET_Y), Game.getWindow());
+                g.drawImage(image, i * getTileSize() + MAP_OFFSET_X, j * getTileSize() + MAP_OFFSET_Y, Game.getWindow());
             }
         }
 
         // Draw selector
         if (isMouseInViewport()) {
             g.setColor(new Color(255, 255, 255, 100));
-            int scaledTileSize = (int) (tileSize * (1 / Resources.scaleX) * zoomLevels[zoom.getValue() - 1]);
+            double scaledTileSize = getTileSize();
             g.fillRect(hoveredTileLocation.getX() * scaledTileSize + MAP_OFFSET_X, hoveredTileLocation.getY() * scaledTileSize + MAP_OFFSET_Y, scaledTileSize, scaledTileSize);
         }
 
-        // Reset clip to window bounds.
-        Rectangle windowBounds = Game.getWindow().getBounds();
-        System.out.println(windowBounds.getWidth());
-        g.setClip(new Rectangle(0, 0, (int) (windowBounds.getWidth() * 1 / Resources.scaleX),
-                (int) (windowBounds.getHeight() * 1/Resources.scaleX)));// TODO Make clear clip function
+        g.clearClip();
 
         // Draw square around viewport
         g.setStroke(new BasicStroke(BOARDER_WIDTH));
@@ -133,6 +125,10 @@ public class EditorScreen extends Screen {
     private boolean isMouseInViewport() {
         return mouseRelativeToMap.x > 0 && mouseRelativeToMap.y > 0 && mouseRelativeToMap.x < MAP_VIEWPORT_SIZE && mouseRelativeToMap.y < MAP_VIEWPORT_SIZE;
     }
+
+    private double getTileSize() {
+        return Resources.getResourceSize("grass.png").getWidth() * zoomLevels[zoom.getValue() - 1];
+    }
     
     @Override
     public void update() {
@@ -141,7 +137,7 @@ public class EditorScreen extends Screen {
 
         mouseRelativeToMap.x = (Game.getMouseHandler().getX() - MAP_OFFSET_X);
         mouseRelativeToMap.y = (Game.getMouseHandler().getY() - MAP_OFFSET_Y);
-        hoveredTileLocation.x = mouseRelativeToMap.x / (int) (tileSize * (1 / Resources.scaleX) * zoomLevels[zoom.getValue()-1]);
-        hoveredTileLocation.y = mouseRelativeToMap.y / (int) (tileSize * (1 / Resources.scaleX) * zoomLevels[zoom.getValue()-1]);// TODO This NEEDS to be fixed.  This NEEDS to be the next task.
+        hoveredTileLocation.x = mouseRelativeToMap.x / (int) getTileSize();
+        hoveredTileLocation.y = mouseRelativeToMap.y / (int) getTileSize();
     }
 }
