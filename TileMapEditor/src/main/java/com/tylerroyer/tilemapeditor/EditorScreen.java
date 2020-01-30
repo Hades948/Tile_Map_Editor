@@ -52,9 +52,7 @@ public class EditorScreen extends Screen {
     private Button zoomInButton, zoomOutButton;
     private Button moveButton, paintButton, propertiesButton;
 
-    public EditorScreen() {
-        tileMap = new TileMap(100, 120);
-    }
+    public EditorScreen() {}
 
     @Override
     public void loadResources() {
@@ -62,6 +60,30 @@ public class EditorScreen extends Screen {
         try (Scanner scanner = new Scanner(new FileInputStream(new File("TileMapEditor/src/main/java/res/tile_names.dat")))) {
             while(scanner.hasNextLine()) {
                 tileNames.add(scanner.nextLine());
+            }
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        }
+
+        // Load tile map
+        try (Scanner scanner = new Scanner(new FileInputStream(new File("TileMapEditor/src/main/java/res/map.dat")))) {
+            int width = Integer.parseInt(scanner.nextLine());
+            int height = Integer.parseInt(scanner.nextLine());
+            tileMap = new TileMap(width, height);
+
+            String defaultTileName = scanner.nextLine();
+            for (ArrayList<Tile> tiles : tileMap.getTiles()) {
+                for (Tile t : tiles) {
+                    t.setImageName(defaultTileName);
+                }
+            }
+
+            while (scanner.hasNextLine()) {
+                String name = scanner.next();
+                int x = scanner.nextInt();
+                int y = scanner.nextInt();
+
+                tileMap.getTiles().get(x).get(y).setImageName(name);
             }
         } catch (FileNotFoundException e) {
             e.printStackTrace();
@@ -75,24 +97,6 @@ public class EditorScreen extends Screen {
             }
 
             paintTileButtons.add(new Button(baseImage, MAP_OFFSET_X + MAP_VIEWPORT_SIZE + 18, MAP_OFFSET_Y + i * 140, new SetIntegerEvent(paintTileIndex, i)));
-        }
-
-        for (ArrayList<Tile> row : tileMap.getTiles()) {
-            for (Tile tile : row) {
-                tile.setImageName("grass.png");
-            }
-        }
-
-        Random rand = new Random();
-        for (int i = 0; i < 5; i++) {
-            int w = rand.nextInt(20) + 10, h = rand.nextInt(20) + 10;
-            int x = rand.nextInt(100 - w), y = rand.nextInt(100 - h);
-            
-            for (int j = x; j < x + w; j++) {
-                for (int k = y; k < y + h; k++) {
-                    tileMap.getTiles().get(j).get(k).setImageName("water.png");
-                }
-            }
         }
         
         Game.getWindow().setBackgroundColor(backgroundColor);
