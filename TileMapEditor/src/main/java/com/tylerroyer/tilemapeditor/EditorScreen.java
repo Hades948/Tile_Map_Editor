@@ -86,9 +86,9 @@ public class EditorScreen extends Screen {
         BufferedImage moveUnpressed = Resources.loadGraphicalImage("move_button_unpressed.png");
         BufferedImage paintUnpressed = Resources.loadGraphicalImage("paint_button_unpressed.png");
         BufferedImage propertiesUnpressed = Resources.loadGraphicalImage("properties_button_unpressed.png");
-        moveButton = new Button(moveUnpressed, moveUnpressed, moveUnpressed, 9, 17, new SetIntegerEvent(mode, MODE_MOVE));
-        paintButton = new Button(paintUnpressed, paintUnpressed, paintUnpressed, 9, 64, new SetIntegerEvent(mode, MODE_PAINT));
-        propertiesButton = new Button(propertiesUnpressed, propertiesUnpressed, propertiesUnpressed, 9, 111, new SetIntegerEvent(mode, MODE_PROPERTIES));
+        moveButton = new Button(moveUnpressed, 9, 17, new SetIntegerEvent(mode, MODE_MOVE));
+        paintButton = new Button(paintUnpressed, 9, 64, new SetIntegerEvent(mode, MODE_PAINT));
+        propertiesButton = new Button(propertiesUnpressed, 9, 111, new SetIntegerEvent(mode, MODE_PROPERTIES));
         zoomInButton.setOutline(buttonOutline);
         zoomOutButton.setOutline(buttonOutline);
     }
@@ -203,7 +203,7 @@ public class EditorScreen extends Screen {
         hoveredTileLocation.x = (int) ((mouseRelativeToMap.x - camera.getOffsetX()) / (int) getTileSize());
         hoveredTileLocation.y = (int) ((mouseRelativeToMap.y - camera.getOffsetY()) / (int) getTileSize());
 
-        // TODO Replace switch statement with polymorphism.
+        // TODO Replace conditional with polymorphism.
         switch (mode.getValue()) {
             default:
             case MODE_MOVE:
