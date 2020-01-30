@@ -107,27 +107,30 @@ public class EditorScreen extends Screen {
             }
         }
 
-        if (isMouseOverMap() && isMouseInViewport()) {
-            switch(mode.getValue()) {
+        switch(mode.getValue()) {
             default:
             case MODE_MOVE:
-                // Draw selector
-                g.setColor(new Color(255, 255, 255, 100));
-                g.fillRect(hoveredTileLocation.getX() * getTileSize() + MAP_OFFSET_X + camera.getOffsetX(), hoveredTileLocation.getY() * getTileSize() + MAP_OFFSET_Y + camera.getOffsetY(), getTileSize(), getTileSize());
+                if (isMouseOverMap() && isMouseInViewport()) {
+                    // Draw selector
+                    g.setColor(new Color(255, 255, 255, 100));
+                    g.fillRect(hoveredTileLocation.getX() * getTileSize() + MAP_OFFSET_X + camera.getOffsetX(), hoveredTileLocation.getY() * getTileSize() + MAP_OFFSET_Y + camera.getOffsetY(), getTileSize(), getTileSize());
+                }
                 break;
             case MODE_PAINT:
-                if (paintSelection != null) {
-                    g.setColor(Color.RED);
-                    g.drawRect(paintSelection.getX() + camera.getOffsetX(), paintSelection.getY() + camera.getOffsetY(), paintSelection.getWidth(), paintSelection.getHeight());// TODO I'd like to just pass this as a rectangle, if possible.
-                }
-
-                g.setColor(new Color(255, 255, 255, 100));
-                for (Point p : selectedTileLocations) {
-                    // TODO Fix rendering here.  Not really sure what's wrong, but it's fine with no camera movement.
-                    g.fillRect(p.getX() * getTileSize() + MAP_OFFSET_X - camera.getOffsetX(), p.getY() * getTileSize() + MAP_OFFSET_Y - camera.getOffsetY(), getTileSize(), getTileSize());
-                }
+                //if (isMouseInViewport()) {
+                    // Draw paint selector
+                    if (paintSelection != null) {
+                        g.setColor(Color.RED);
+                        g.drawRect(paintSelection.getX() + MAP_OFFSET_X + camera.getOffsetX(), paintSelection.getY() + MAP_OFFSET_Y + camera.getOffsetY(), paintSelection.getWidth(), paintSelection.getHeight());// TODO I'd like to just pass this as a rectangle, if possible.
+                    }
+    
+                    // Draw highlight for selected tiles
+                    g.setColor(new Color(255, 255, 255, 100));
+                    for (Point p : selectedTileLocations) {
+                        g.fillRect(p.getX() * getTileSize() + MAP_OFFSET_X + camera.getOffsetX(), p.getY() * getTileSize() + MAP_OFFSET_Y + camera.getOffsetY(), getTileSize(), getTileSize());
+                    }
+                //}
                 break;
-            }
         }
 
         g.clearClip();
@@ -247,8 +250,8 @@ public class EditorScreen extends Screen {
                                 } else {
                                     Point mouseNow = new Point((int) (Game.getMouseHandler().getX() - camera.getOffsetX()), 
                                         (int) (Game.getMouseHandler().getY() - camera.getOffsetY()));
-                                    int x = (int) Math.min(clickDownPoint.getX(), mouseNow.getX());
-                                    int y = (int) Math.min(clickDownPoint.getY(), mouseNow.getY());
+                                    int x = (int) Math.min(clickDownPoint.getX(), mouseNow.getX()) - MAP_OFFSET_X;
+                                    int y = (int) Math.min(clickDownPoint.getY(), mouseNow.getY()) - MAP_OFFSET_Y;
                                     int width = (int) Math.abs(mouseNow.getX() - clickDownPoint.getX());
                                     int height = (int) Math.abs(mouseNow.getY() - clickDownPoint.getY());
                                     paintSelection = new Rectangle(x, y, width, height);
@@ -258,13 +261,18 @@ public class EditorScreen extends Screen {
                     } else {
                         if (wasMouseDownInViewport) {
                             // Just clicked up
-                            double x1 = (paintSelection.getX() - MAP_OFFSET_X - camera.getOffsetX()) / getTileSize();
-                            double y1 = (paintSelection.getY() - MAP_OFFSET_Y - camera.getOffsetY()) / getTileSize();
-                            double x2 = (paintSelection.getX() - MAP_OFFSET_X + paintSelection.getWidth() - camera.getOffsetX()) / getTileSize();
-                            double y2 = (paintSelection.getY() - MAP_OFFSET_Y + paintSelection.getHeight() - camera.getOffsetY()) / getTileSize();
+                            double x1 = (paintSelection.getX()) / getTileSize();
+                            double y1 = (paintSelection.getY()) / getTileSize();
+                            double x2 = (paintSelection.getX() + paintSelection.getWidth()) / getTileSize();
+                            double y2 = (paintSelection.getY() + paintSelection.getHeight()) / getTileSize();
 
                             for (int i = (int) x1; i <= (int) x2; i++) {
                                 for (int j = (int) y1; j <= (int) y2; j++) {
+                                    if (i < 0 || j < 0)
+                                        continue;
+                                    if (i >= tileMap.getTiles().size() || j >= tileMap.getTiles().get(0).size())
+                                        continue;
+
                                     selectedTileLocations.add(new Point(i, j));
                                 }
                             }
