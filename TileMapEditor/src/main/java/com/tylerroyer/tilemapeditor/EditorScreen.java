@@ -5,10 +5,14 @@ import java.awt.Color;
 import java.awt.Cursor;
 import java.awt.Font;
 import java.awt.image.BufferedImage;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.awt.Point;
 import java.awt.Rectangle;
 import java.util.ArrayList;
 import java.util.Random;
+import java.util.Scanner;
 
 import com.tylerroyer.molasses.*;
 import com.tylerroyer.molasses.events.DecrementIntegerEvent;
@@ -25,17 +29,20 @@ public class EditorScreen extends Screen {
     private MutableInt mode = new MutableInt(MODE_MOVE);
 
     private boolean wasMouseDownInViewport = false;
-    private double[] zoomLevels = {0.03125, 0.0625, 0.125, 0.25};
+    private double[] zoomLevels = { 0.03125, 0.0625, 0.125, 0.25 };
     private Point mouseRelativeToMap = new Point();
     private Point hoveredTileLocation = new Point();
     private Point clickDownPoint = new Point();
     private Color backgroundColor = new Color(190, 205, 190);
     private MutableInt zoom = new MutableInt(3);
+    private MutableInt paintTileIndex = new MutableInt(-1);
+    private ArrayList<Button> paintTileButtons = new ArrayList<>();
     private TileMap tileMap;
     private Camera camera = new Camera();
     private BasicStroke buttonOutline = new BasicStroke(2);
     private Rectangle paintSelection = null;
     private ArrayList<Point> selectedTileLocations = new ArrayList<>();
+    private ArrayList<String> tileNames = new ArrayList<>();
 
     private final int MAP_OFFSET_X = 54, MAP_OFFSET_Y = 18;
     private final int MAP_VIEWPORT_SIZE = 640;
@@ -51,11 +58,23 @@ public class EditorScreen extends Screen {
 
     @Override
     public void loadResources() {
-        Resources.loadGraphicalImage("grass.png");
-        Resources.loadGraphicalImage("water.png");
-        for (int i = 0; i < zoomLevels.length; i++) {
-            Resources.addGraphicalResource("grass.png_zoom" + (i+1), Resources.scaleImage(Resources.getGraphicalResource("grass.png"), zoomLevels[i], zoomLevels[i]));
-            Resources.addGraphicalResource("water.png_zoom" + (i+1), Resources.scaleImage(Resources.getGraphicalResource("water.png"), zoomLevels[i], zoomLevels[i]));
+        // Grab tile names from file.
+        try (Scanner scanner = new Scanner(new FileInputStream(new File("TileMapEditor/src/main/java/res/tile_names.dat")))) {
+            while(scanner.hasNextLine()) {
+                tileNames.add(scanner.nextLine());
+            }
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        }
+
+        for (int i = 0; i < tileNames.size(); i++) {
+            String tileName = tileNames.get(i);
+            BufferedImage baseImage = Resources.loadGraphicalImage(tileName);
+            for (int j = 0; j < zoomLevels.length; j++) {
+                Resources.addGraphicalResource(tileName + "_zoom" + (j+1), Resources.scaleImage(baseImage, zoomLevels[j], zoomLevels[j]));
+            }
+
+            paintTileButtons.add(new Button(baseImage, MAP_OFFSET_X + MAP_VIEWPORT_SIZE + 18, MAP_OFFSET_Y + i * 140, new SetIntegerEvent(paintTileIndex, i)));
         }
 
         for (ArrayList<Tile> row : tileMap.getTiles()) {
@@ -148,6 +167,11 @@ public class EditorScreen extends Screen {
         moveButton.render(g);
         paintButton.render(g);
         propertiesButton.render(g);
+        if (mode.getValue() == MODE_PAINT) {
+            for (Button b : paintTileButtons) {
+                b.render(g);
+            }
+        }
 
         // Draw tile info
         if (isMouseOverMap() && isMouseInViewport() && mode.getValue() == MODE_MOVE) {
@@ -194,6 +218,11 @@ public class EditorScreen extends Screen {
         moveButton.update();
         paintButton.update();
         propertiesButton.update();
+        if (mode.getValue() == MODE_PAINT) {
+            for (Button b : paintTileButtons) {
+                b.update();
+            }
+        }
         moveButton.setOutline((mode.getValue() == MODE_MOVE) ? buttonOutline : null);
         paintButton.setOutline((mode.getValue() == MODE_PAINT) ? buttonOutline : null);
         propertiesButton.setOutline((mode.getValue() == MODE_PROPERTIES) ? buttonOutline : null);
@@ -272,6 +301,13 @@ public class EditorScreen extends Screen {
                     }
                 break;
         }
-        
+
+        if (mode.getValue() == MODE_PAINT && paintTileIndex.getValue() >= 0) {
+            for (Point p : selectedTileLocations) {
+                String imageName = tileNames.get(paintTileIndex.getValue());
+                tileMap.getTiles().get((int) p.getX()).get((int) p.getY()).setImageName(imageName);
+            }
+            paintTileIndex.setValue(-1);
+        }
     }
 }
