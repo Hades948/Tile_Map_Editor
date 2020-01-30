@@ -24,7 +24,6 @@ public class EditorScreen extends Screen {
     private final int MODE_PROPERTIES = 2;
     private MutableInt mode = new MutableInt(MODE_MOVE);
 
-    private boolean showTileInfo;
     private boolean wasMouseDownInViewport = false;
     private double[] zoomLevels = {0.03125, 0.0625, 0.125, 0.25};
     private Point mouseRelativeToMap = new Point();
@@ -47,7 +46,7 @@ public class EditorScreen extends Screen {
     private Button moveButton, paintButton, propertiesButton;
 
     public EditorScreen() {
-        tileMap = new TileMap(100, 100);
+        tileMap = new TileMap(100, 120);
     }
 
     @Override
@@ -153,30 +152,31 @@ public class EditorScreen extends Screen {
         propertiesButton.render(g);
 
         // Draw tile info
-        if (isMouseOverMap() && isMouseInViewport() && showTileInfo && mode.getValue() == MODE_MOVE) {
-            int infoX = Game.getMouseHandler().getX() + 20, infoY = Game.getMouseHandler().getY() + 20;
-            if (mouseRelativeToMap.x > 444) {
-                infoX = Game.getMouseHandler().getX() - 20 - 192;
+        if (isMouseOverMap() && isMouseInViewport() && mode.getValue() == MODE_MOVE) {
+            try {
+                int infoX = MAP_OFFSET_X + MAP_VIEWPORT_SIZE + 18, infoY = MAP_OFFSET_Y;
+
+                g.setFont(new Font("Helvetica", Font.PLAIN, 16));
+
+                g.setColor(backgroundColor);
+                g.fillRect(infoX, infoY, 192, 192);
+
+                g.setStroke(new BasicStroke(BOARDER_WIDTH));
+                g.setColor(Color.BLACK);
+                g.drawRect(infoX, infoY, 192, 192);
+
+                t = tileMap.getTiles().get(hoveredTileLocation.x).get(hoveredTileLocation.y);
+                BufferedImage image = Resources.getGraphicalResource(t.getImageName());
+                g.drawImage(image, infoX + 32, infoY + 8);
+                g.drawString(t.getImageName(), infoX + 25, infoY + 155);
+                g.drawString("(" + hoveredTileLocation.x + ", " + hoveredTileLocation.y + ")", infoX + 25, infoY + 180);
+            } catch (IndexOutOfBoundsException e) {
+                System.err.println("Trying to display info about an out-of-bounds tile!");
             }
-
-            if (mouseRelativeToMap.y > 515) {
-                infoY = Game.getMouseHandler().getY() - 20 - 192;
-            }
-
-            g.setFont(new Font("Helvetica", Font.PLAIN, 16));
-
-            g.setColor(backgroundColor);
-            g.fillRect(infoX, infoY, 192, 192);
-
-            g.setStroke(new BasicStroke(BOARDER_WIDTH));
-            g.setColor(Color.BLACK);
-            g.drawRect(infoX, infoY, 192, 192);
-
-            t = tileMap.getTiles().get(hoveredTileLocation.x).get(hoveredTileLocation.y);
-            BufferedImage image = Resources.getGraphicalResource(t.getImageName());
-            g.drawImage(image, infoX + 32, infoY + 8);
-            g.drawString(t.getImageName(), infoX + 25, infoY + 155);
-            g.drawString("(" + hoveredTileLocation.x + ", " + hoveredTileLocation.y + ")", infoX + 25, infoY + 180);
+        } else if (mode.getValue() != MODE_PAINT) {
+            g.setFont(new Font("Helvetica", Font.PLAIN, 18));
+            g.drawString("Hover over a tile to see tile info.", MAP_OFFSET_X + MAP_VIEWPORT_SIZE + 18, MAP_OFFSET_Y + 20);
+            g.drawString("Click and drag to move the map.", MAP_OFFSET_X + MAP_VIEWPORT_SIZE + 18, MAP_OFFSET_Y + 50);
         }
     }
 
@@ -217,7 +217,6 @@ public class EditorScreen extends Screen {
             default:
             case MODE_MOVE:
                 boolean isMouseDown = Game.getMouseHandler().isDown();
-                showTileInfo = !isMouseDown;
                 if (isMouseDown) {
                     if (isMouseInViewport()) {
                             if (!wasMouseDownInViewport) {
@@ -239,7 +238,6 @@ public class EditorScreen extends Screen {
                 break;
             case MODE_PAINT:
                 isMouseDown = Game.getMouseHandler().isDown();
-                    showTileInfo = !isMouseDown;
                     if (isMouseDown) {
                         if (isMouseInViewport()) {
                                 if (!wasMouseDownInViewport) {
