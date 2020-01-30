@@ -35,6 +35,8 @@ public class EditorScreen extends Screen {
     private TileMap tileMap;
     private Camera camera = new Camera();
     private BasicStroke buttonOutline = new BasicStroke(2);
+    private Rectangle paintSelection = null;
+    private ArrayList<Point> selectedTileLocations = new ArrayList<>();
 
     private final int MAP_OFFSET_X = 54, MAP_OFFSET_Y = 18;
     private final int MAP_VIEWPORT_SIZE = 640;
@@ -105,11 +107,27 @@ public class EditorScreen extends Screen {
             }
         }
 
-        // Draw selector
         if (isMouseOverMap() && isMouseInViewport()) {
-            g.setColor(new Color(255, 255, 255, 100));
-            double scaledTileSize = getTileSize();
-            g.fillRect(hoveredTileLocation.getX() * scaledTileSize + MAP_OFFSET_X + camera.getOffsetX(), hoveredTileLocation.getY() * scaledTileSize + MAP_OFFSET_Y + camera.getOffsetY(), scaledTileSize, scaledTileSize);
+            switch(mode.getValue()) {
+            default:
+            case MODE_MOVE:
+                // Draw selector
+                g.setColor(new Color(255, 255, 255, 100));
+                g.fillRect(hoveredTileLocation.getX() * getTileSize() + MAP_OFFSET_X + camera.getOffsetX(), hoveredTileLocation.getY() * getTileSize() + MAP_OFFSET_Y + camera.getOffsetY(), getTileSize(), getTileSize());
+                break;
+            case MODE_PAINT:
+                if (paintSelection != null) {
+                    g.setColor(Color.RED);
+                    g.drawRect(paintSelection.getX() + camera.getOffsetX(), paintSelection.getY() + camera.getOffsetY(), paintSelection.getWidth(), paintSelection.getHeight());// TODO I'd like to just pass this as a rectangle, if possible.
+                }
+
+                g.setColor(new Color(255, 255, 255, 100));
+                for (Point p : selectedTileLocations) {
+                    // TODO Fix rendering here.  Not really sure what's wrong, but it's fine with no camera movement.
+                    g.fillRect(p.getX() * getTileSize() + MAP_OFFSET_X - camera.getOffsetX(), p.getY() * getTileSize() + MAP_OFFSET_Y - camera.getOffsetY(), getTileSize(), getTileSize());
+                }
+                break;
+            }
         }
 
         g.clearClip();
@@ -132,7 +150,7 @@ public class EditorScreen extends Screen {
         propertiesButton.render(g);
 
         // Draw tile info
-        if (isMouseOverMap() && isMouseInViewport() && showTileInfo) {
+        if (isMouseOverMap() && isMouseInViewport() && showTileInfo && mode.getValue() == MODE_MOVE) {
             int infoX = Game.getMouseHandler().getX() + 20, infoY = Game.getMouseHandler().getY() + 20;
             if (mouseRelativeToMap.x > 444) {
                 infoX = Game.getMouseHandler().getX() - 20 - 192;
@@ -176,51 +194,87 @@ public class EditorScreen extends Screen {
     
     @Override
     public void update() {
+        // Buttons
         zoomInButton.update();
         zoomOutButton.update();
         moveButton.update();
         paintButton.update();
         propertiesButton.update();
+        moveButton.setOutline((mode.getValue() == MODE_MOVE) ? buttonOutline : null);
+        paintButton.setOutline((mode.getValue() == MODE_PAINT) ? buttonOutline : null);
+        propertiesButton.setOutline((mode.getValue() == MODE_PROPERTIES) ? buttonOutline : null);
 
         mouseRelativeToMap.x = (Game.getMouseHandler().getX() - MAP_OFFSET_X);
         mouseRelativeToMap.y = (Game.getMouseHandler().getY() - MAP_OFFSET_Y);
         hoveredTileLocation.x = (int) ((mouseRelativeToMap.x - camera.getOffsetX()) / (int) getTileSize());
         hoveredTileLocation.y = (int) ((mouseRelativeToMap.y - camera.getOffsetY()) / (int) getTileSize());
 
-        boolean isMouseDown = Game.getMouseHandler().isDown();
-        showTileInfo = !isMouseDown;
-        if (isMouseDown) {
-            if (isMouseInViewport()) {
-                switch (mode.getValue()) {
-                default:
-                case MODE_MOVE:
-                    Game.getWindow().setCursor(Cursor.getPredefinedCursor(Cursor.MOVE_CURSOR));
-                    if (!wasMouseDownInViewport) {
-                        // Just clicked down.
-                        clickDownPoint.x = (int) (Game.getMouseHandler().getX() - camera.getOffsetX());
-                        clickDownPoint.y = (int) (Game.getMouseHandler().getY() - camera.getOffsetY());
-                    } else {
-                        Point mouseNow = new Point(Game.getMouseHandler().getX(), Game.getMouseHandler().getY());
-                    
-                        camera.setOffsetX(mouseNow.getX() - clickDownPoint.getX());
-                        camera.setOffsetY(mouseNow.getY() - clickDownPoint.getY());
+        // TODO Replace switch statement with polymorphism.
+        switch (mode.getValue()) {
+            default:
+            case MODE_MOVE:
+                boolean isMouseDown = Game.getMouseHandler().isDown();
+                showTileInfo = !isMouseDown;
+                if (isMouseDown) {
+                    if (isMouseInViewport()) {
+                            if (!wasMouseDownInViewport) {
+                                // Just clicked down.
+                                clickDownPoint.x = (int) (Game.getMouseHandler().getX() - camera.getOffsetX());
+                                clickDownPoint.y = (int) (Game.getMouseHandler().getY() - camera.getOffsetY());
+                            } else {
+                                Point mouseNow = new Point(Game.getMouseHandler().getX(), Game.getMouseHandler().getY());
+                                Game.getWindow().setCursor(Cursor.getPredefinedCursor(Cursor.MOVE_CURSOR));
+                                camera.setOffsetX(mouseNow.getX() - clickDownPoint.getX());
+                                camera.setOffsetY(mouseNow.getY() - clickDownPoint.getY());
+                            }
+                        wasMouseDownInViewport = true;
                     }
-                    break;
-                case MODE_PAINT:
-                    break;
-                case MODE_PROPERTIES:
-                    break;
+                } else {
+                    Game.getWindow().setCursor(Cursor.getDefaultCursor());
+                    wasMouseDownInViewport = false;
                 }
+                break;
+            case MODE_PAINT:
+                isMouseDown = Game.getMouseHandler().isDown();
+                    showTileInfo = !isMouseDown;
+                    if (isMouseDown) {
+                        if (isMouseInViewport()) {
+                                if (!wasMouseDownInViewport) {
+                                    // Just clicked down.
+                                    selectedTileLocations.clear();
+                                    clickDownPoint.x = (int) (Game.getMouseHandler().getX() - camera.getOffsetX());
+                                    clickDownPoint.y = (int) (Game.getMouseHandler().getY() - camera.getOffsetY());
+                                } else {
+                                    Point mouseNow = new Point((int) (Game.getMouseHandler().getX() - camera.getOffsetX()), 
+                                        (int) (Game.getMouseHandler().getY() - camera.getOffsetY()));
+                                    int x = (int) Math.min(clickDownPoint.getX(), mouseNow.getX());
+                                    int y = (int) Math.min(clickDownPoint.getY(), mouseNow.getY());
+                                    int width = (int) Math.abs(mouseNow.getX() - clickDownPoint.getX());
+                                    int height = (int) Math.abs(mouseNow.getY() - clickDownPoint.getY());
+                                    paintSelection = new Rectangle(x, y, width, height);
+                                }
+                            wasMouseDownInViewport = true;
+                        }
+                    } else {
+                        if (wasMouseDownInViewport) {
+                            // Just clicked up
+                            double x1 = (paintSelection.getX() - MAP_OFFSET_X - camera.getOffsetX()) / getTileSize();
+                            double y1 = (paintSelection.getY() - MAP_OFFSET_Y - camera.getOffsetY()) / getTileSize();
+                            double x2 = (paintSelection.getX() - MAP_OFFSET_X + paintSelection.getWidth() - camera.getOffsetX()) / getTileSize();
+                            double y2 = (paintSelection.getY() - MAP_OFFSET_Y + paintSelection.getHeight() - camera.getOffsetY()) / getTileSize();
 
-                wasMouseDownInViewport = true;
-            }
-        } else {
-            Game.getWindow().setCursor(Cursor.getDefaultCursor());
-            wasMouseDownInViewport = false;
+                            for (int i = (int) x1; i <= (int) x2; i++) {
+                                for (int j = (int) y1; j <= (int) y2; j++) {
+                                    selectedTileLocations.add(new Point(i, j));
+                                }
+                            }
+
+                            paintSelection = null;
+                        }
+                        wasMouseDownInViewport = false;
+                    }
+                break;
         }
-
-        moveButton.setOutline((mode.getValue() == MODE_MOVE) ? buttonOutline : null);
-        paintButton.setOutline((mode.getValue() == MODE_PAINT) ? buttonOutline : null);
-        propertiesButton.setOutline((mode.getValue() == MODE_PROPERTIES) ? buttonOutline : null);
+        
     }
 }
