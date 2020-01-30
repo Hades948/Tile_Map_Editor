@@ -14,12 +14,18 @@ import com.tylerroyer.molasses.*;
 import com.tylerroyer.molasses.events.DecrementIntegerEvent;
 import com.tylerroyer.molasses.events.Event;
 import com.tylerroyer.molasses.events.IncrementIntegerEvent;
+import com.tylerroyer.molasses.events.SetIntegerEvent;
 
 import org.apache.commons.lang3.mutable.MutableInt;
 
 public class EditorScreen extends Screen {
+    private final int MODE_MOVE = 0;
+    private final int MODE_PAINT = 1;
+    private final int MODE_PROPERTIES = 2;
+    private MutableInt mode = new MutableInt(MODE_MOVE);
+
     private boolean showTileInfo;
-    private boolean wasMouseDown = false;
+    private boolean wasMouseDownInViewport = false;
     private double[] zoomLevels = {0.03125, 0.0625, 0.125, 0.25};
     private Point mouseRelativeToMap = new Point();
     private Point hoveredTileLocation = new Point();
@@ -28,13 +34,15 @@ public class EditorScreen extends Screen {
     private MutableInt zoom = new MutableInt(3);
     private TileMap tileMap;
     private Camera camera = new Camera();
+    private BasicStroke buttonOutline = new BasicStroke(2);
 
-    private final int MAP_OFFSET_X = 18, MAP_OFFSET_Y = 18;
+    private final int MAP_OFFSET_X = 54, MAP_OFFSET_Y = 18;
     private final int MAP_VIEWPORT_SIZE = 640;
     private final int BOARDER_WIDTH = 2;
 
     private Event zoomInEvent, zoomOutEvent;
     private Button zoomInButton, zoomOutButton;
+    private Button moveButton, paintButton, propertiesButton;
 
     public EditorScreen() {
         tileMap = new TileMap(100, 100);
@@ -70,11 +78,16 @@ public class EditorScreen extends Screen {
         Game.getWindow().setBackgroundColor(backgroundColor);
 
         Font font = new Font("Helvetica", Font.PLAIN, 42);
-        BasicStroke buttonOutline = new BasicStroke(2);
         zoomInEvent = new IncrementIntegerEvent(zoom, 1, zoomLevels.length);
         zoomOutEvent = new DecrementIntegerEvent(zoom, 1, 1);
         zoomInButton = new Button("Zoom in", font, new Color(128, 128, 128), Color.BLACK, 200, 50, MAP_OFFSET_X + MAP_VIEWPORT_SIZE - 420, MAP_OFFSET_Y + MAP_VIEWPORT_SIZE + 20, zoomInEvent);
         zoomOutButton = new Button("Zoom out", font, new Color(128, 128, 128), Color.BLACK, 200, 50, MAP_OFFSET_X + MAP_VIEWPORT_SIZE - 200, MAP_OFFSET_Y + MAP_VIEWPORT_SIZE + 20, zoomOutEvent);
+        BufferedImage moveUnpressed = Resources.loadGraphicalImage("move_button_unpressed.png");
+        BufferedImage paintUnpressed = Resources.loadGraphicalImage("paint_button_unpressed.png");
+        BufferedImage propertiesUnpressed = Resources.loadGraphicalImage("properties_button_unpressed.png");
+        moveButton = new Button(moveUnpressed, moveUnpressed, moveUnpressed, 9, 17, new SetIntegerEvent(mode, MODE_MOVE));
+        paintButton = new Button(paintUnpressed, paintUnpressed, paintUnpressed, 9, 64, new SetIntegerEvent(mode, MODE_PAINT));
+        propertiesButton = new Button(propertiesUnpressed, propertiesUnpressed, propertiesUnpressed, 9, 111, new SetIntegerEvent(mode, MODE_PROPERTIES));
         zoomInButton.setOutline(buttonOutline);
         zoomOutButton.setOutline(buttonOutline);
     }
@@ -114,6 +127,9 @@ public class EditorScreen extends Screen {
         // Draw buttons
         zoomInButton.render(g);
         zoomOutButton.render(g);
+        moveButton.render(g);
+        paintButton.render(g);
+        propertiesButton.render(g);
 
         // Draw tile info
         if (isMouseOverMap() && isMouseInViewport() && showTileInfo) {
@@ -162,6 +178,9 @@ public class EditorScreen extends Screen {
     public void update() {
         zoomInButton.update();
         zoomOutButton.update();
+        moveButton.update();
+        paintButton.update();
+        propertiesButton.update();
 
         mouseRelativeToMap.x = (Game.getMouseHandler().getX() - MAP_OFFSET_X);
         mouseRelativeToMap.y = (Game.getMouseHandler().getY() - MAP_OFFSET_Y);
@@ -172,24 +191,36 @@ public class EditorScreen extends Screen {
         showTileInfo = !isMouseDown;
         if (isMouseDown) {
             if (isMouseInViewport()) {
-                Game.getWindow().setCursor(Cursor.getPredefinedCursor(Cursor.MOVE_CURSOR));
-
-                if (!wasMouseDown) {
-                    // Just clicked down.
-                    clickDownPoint.x = (int) (Game.getMouseHandler().getX() - camera.getOffsetX());
-                    clickDownPoint.y = (int) (Game.getMouseHandler().getY() - camera.getOffsetY());
-                } else {
-                    Point mouseNow = new Point(Game.getMouseHandler().getX(), Game.getMouseHandler().getY());
-                
-                    camera.setOffsetX(mouseNow.getX() - clickDownPoint.getX());
-                    camera.setOffsetY(mouseNow.getY() - clickDownPoint.getY());
+                switch (mode.getValue()) {
+                default:
+                case MODE_MOVE:
+                    Game.getWindow().setCursor(Cursor.getPredefinedCursor(Cursor.MOVE_CURSOR));
+                    if (!wasMouseDownInViewport) {
+                        // Just clicked down.
+                        clickDownPoint.x = (int) (Game.getMouseHandler().getX() - camera.getOffsetX());
+                        clickDownPoint.y = (int) (Game.getMouseHandler().getY() - camera.getOffsetY());
+                    } else {
+                        Point mouseNow = new Point(Game.getMouseHandler().getX(), Game.getMouseHandler().getY());
+                    
+                        camera.setOffsetX(mouseNow.getX() - clickDownPoint.getX());
+                        camera.setOffsetY(mouseNow.getY() - clickDownPoint.getY());
+                    }
+                    break;
+                case MODE_PAINT:
+                    break;
+                case MODE_PROPERTIES:
+                    break;
                 }
 
-                wasMouseDown = true;
+                wasMouseDownInViewport = true;
             }
         } else {
             Game.getWindow().setCursor(Cursor.getDefaultCursor());
-            wasMouseDown = false;
+            wasMouseDownInViewport = false;
         }
+
+        moveButton.setOutline((mode.getValue() == MODE_MOVE) ? buttonOutline : null);
+        paintButton.setOutline((mode.getValue() == MODE_PAINT) ? buttonOutline : null);
+        propertiesButton.setOutline((mode.getValue() == MODE_PROPERTIES) ? buttonOutline : null);
     }
 }
