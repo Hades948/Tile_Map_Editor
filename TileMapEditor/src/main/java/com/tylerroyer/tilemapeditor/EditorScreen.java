@@ -116,19 +116,17 @@ public class EditorScreen extends Screen {
                 }
                 break;
             case MODE_PAINT:
-                //if (isMouseInViewport()) {
-                    // Draw paint selector
-                    if (paintSelection != null) {
-                        g.setColor(Color.RED);
-                        g.drawRect(paintSelection.getX() + MAP_OFFSET_X + camera.getOffsetX(), paintSelection.getY() + MAP_OFFSET_Y + camera.getOffsetY(), paintSelection.getWidth(), paintSelection.getHeight());// TODO I'd like to just pass this as a rectangle, if possible.
-                    }
-    
-                    // Draw highlight for selected tiles
-                    g.setColor(new Color(255, 255, 255, 100));
-                    for (Point p : selectedTileLocations) {
-                        g.fillRect(p.getX() * getTileSize() + MAP_OFFSET_X + camera.getOffsetX(), p.getY() * getTileSize() + MAP_OFFSET_Y + camera.getOffsetY(), getTileSize(), getTileSize());
-                    }
-                //}
+                // Draw paint selector
+                if (paintSelection != null) {
+                    g.setColor(Color.RED);
+                    g.drawRect(paintSelection.getX() + MAP_OFFSET_X + camera.getOffsetX(), paintSelection.getY() + MAP_OFFSET_Y + camera.getOffsetY(), paintSelection.getWidth(), paintSelection.getHeight());// TODO I'd like to just pass this as a rectangle, if possible.
+                }
+
+                // Draw highlight for selected tiles
+                g.setColor(new Color(255, 255, 255, 100));
+                for (Point p : selectedTileLocations) {
+                    g.fillRect(p.getX() * getTileSize() + MAP_OFFSET_X + camera.getOffsetX(), p.getY() * getTileSize() + MAP_OFFSET_Y + camera.getOffsetY(), getTileSize(), getTileSize());
+                }
                 break;
         }
 
@@ -158,18 +156,11 @@ public class EditorScreen extends Screen {
 
                 g.setFont(new Font("Helvetica", Font.PLAIN, 16));
 
-                g.setColor(backgroundColor);
-                g.fillRect(infoX, infoY, 192, 192);
-
-                g.setStroke(new BasicStroke(BOARDER_WIDTH));
-                g.setColor(Color.BLACK);
-                g.drawRect(infoX, infoY, 192, 192);
-
                 t = tileMap.getTiles().get(hoveredTileLocation.x).get(hoveredTileLocation.y);
                 BufferedImage image = Resources.getGraphicalResource(t.getImageName());
-                g.drawImage(image, infoX + 32, infoY + 8);
-                g.drawString(t.getImageName(), infoX + 25, infoY + 155);
-                g.drawString("(" + hoveredTileLocation.x + ", " + hoveredTileLocation.y + ")", infoX + 25, infoY + 180);
+                g.drawImage(image, infoX, infoY);
+                g.drawString(t.getImageName(), infoX, infoY + 147);
+                g.drawString("(" + hoveredTileLocation.x + ", " + hoveredTileLocation.y + ")", infoX, infoY + 172);
             } catch (IndexOutOfBoundsException e) {
                 System.err.println("Trying to display info about an out-of-bounds tile!");
             }
