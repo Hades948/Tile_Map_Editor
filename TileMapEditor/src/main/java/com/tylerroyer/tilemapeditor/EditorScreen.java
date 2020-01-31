@@ -4,6 +4,7 @@ import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Cursor;
 import java.awt.Font;
+import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.FileInputStream;
@@ -13,9 +14,9 @@ import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.awt.Point;
 import java.awt.Rectangle;
+import java.awt.RenderingHints;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Random;
 import java.util.Scanner;
 import java.util.Map.Entry;
 
@@ -110,6 +111,8 @@ public class EditorScreen extends Screen {
         for (int i = 0; i < tileNames.size(); i++) {
             String tileName = tileNames.get(i);
             BufferedImage baseImage = Resources.loadGraphicalImage(tileName);
+            baseImage = Resources.scaleImage(baseImage, 128/baseImage.getWidth(), 128/baseImage.getHeight());
+            Resources.addGraphicalResource(tileName, baseImage);
             for (int j = 0; j < zoomLevels.length; j++) {
                 Resources.addGraphicalResource(tileName + "_zoom" + (j+1), Resources.scaleImage(baseImage, zoomLevels[j], zoomLevels[j]));
             }
