@@ -19,6 +19,8 @@ import java.util.Random;
 import java.util.Scanner;
 import java.util.Map.Entry;
 
+import javax.imageio.ImageIO;
+
 import com.tylerroyer.molasses.*;
 import com.tylerroyer.molasses.events.DecrementIntegerEvent;
 import com.tylerroyer.molasses.events.Event;
@@ -44,6 +46,7 @@ public class EditorScreen extends Screen {
     private MutableInt zoom = new MutableInt(3);
     private MutableInt paintTileIndex = new MutableInt(-1);
     private MutableBoolean readyToSave = new MutableBoolean(false);
+    private MutableBoolean readyToGenerateMap = new MutableBoolean(false);
     private ArrayList<Button> paintTileButtons = new ArrayList<>();
     private TileMap tileMap;
     private Camera camera = new Camera();
@@ -59,7 +62,7 @@ public class EditorScreen extends Screen {
     private Event zoomInEvent, zoomOutEvent;
     private Button zoomInButton, zoomOutButton;
     private Button moveButton, paintButton, propertiesButton;
-    private Button saveButton;
+    private Button saveButton, mapButton;
 
     public EditorScreen() {}
 
@@ -119,11 +122,14 @@ public class EditorScreen extends Screen {
         BufferedImage paintUnpressed = Resources.loadGraphicalImage("paint_button_unpressed.png");
         BufferedImage propertiesUnpressed = Resources.loadGraphicalImage("properties_button_unpressed.png");
         BufferedImage saveUnpressed = Resources.loadGraphicalImage("save_button_unpressed.png");
+        BufferedImage mapUnpressed = Resources.loadGraphicalImage("map_button_unpressed.png");
         moveButton = new Button(moveUnpressed, 9, 17, new SetIntegerEvent(mode, MODE_MOVE));
         paintButton = new Button(paintUnpressed, 9, 64, new SetIntegerEvent(mode, MODE_PAINT));
         propertiesButton = new Button(propertiesUnpressed, 9, 111, new SetIntegerEvent(mode, MODE_PROPERTIES));
-        saveButton = new Button(saveUnpressed, 9, MAP_OFFSET_Y + MAP_VIEWPORT_SIZE - 36, new ToggleOnEvent(readyToSave));
+        saveButton = new Button(saveUnpressed, 9, MAP_OFFSET_Y + MAP_VIEWPORT_SIZE - 81, new ToggleOnEvent(readyToSave));
+        mapButton = new Button(mapUnpressed, 9, MAP_OFFSET_Y + MAP_VIEWPORT_SIZE - 36, new ToggleOnEvent(readyToGenerateMap));
         saveButton.setOutline(buttonOutline);
+        mapButton.setOutline(buttonOutline);
         zoomInButton.setOutline(buttonOutline);
         zoomOutButton.setOutline(buttonOutline);
     }
@@ -184,6 +190,7 @@ public class EditorScreen extends Screen {
         paintButton.render(g);
         propertiesButton.render(g);
         saveButton.render(g);
+        mapButton.render(g);
         if (mode.getValue() == MODE_PAINT) {
             for (Button b : paintTileButtons) {
                 b.render(g);
@@ -236,6 +243,7 @@ public class EditorScreen extends Screen {
         paintButton.update();
         propertiesButton.update();
         saveButton.update();
+        mapButton.update();
         if (mode.getValue() == MODE_PAINT) {
             for (Button b : paintTileButtons) {
                 b.update();
@@ -373,10 +381,54 @@ public class EditorScreen extends Screen {
             } catch (IOException e) {
                 e.printStackTrace();
             }
+            
             readyToSave.setFalse();
-
             Game.getWindow().setCursor(Cursor.getDefaultCursor());
             System.out.println("Saved!");
+        }
+
+        if (readyToGenerateMap.isTrue()) {
+            System.out.println("Generating map...");
+            Game.getWindow().setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
+
+            // Sample all tile types.
+            HashMap<String, Color> colorValues = new HashMap<>();
+            for (String name : tileNames) {
+                BufferedImage image = Resources.getGraphicalResource(name);
+                int r = 0, g = 0, b = 0, count = 0;
+                for (int x = 0; x < image.getWidth(); x++) {
+                    for (int y = 0; y < image.getHeight(); y++) {
+                        Color color = new Color(image.getRGB(x, y));
+                        r += color.getRed();
+                        g += color.getGreen();
+                        b += color.getBlue();
+                        count++;
+                    }
+                }
+
+                colorValues.put(name, new Color(r/count, g/count, b/count));
+            }
+
+            int width = tileMap.getTiles().size();
+            int height = tileMap.getTiles().get(0).size();
+            BufferedImage map = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
+
+            for (int x = 0; x < width; x++) {
+                for (int y = 0; y < height; y++) {
+                    Tile t = tileMap.getTiles().get(x).get(y);
+                    map.setRGB(x, y, colorValues.get(t.getImageName()).getRGB());
+                }
+            }
+
+            try {
+                ImageIO.write(map, "png", new FileOutputStream("TileMapEditor/src/main/java/res/map.png"));
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            
+            readyToGenerateMap.setFalse();
+            Game.getWindow().setCursor(Cursor.getDefaultCursor());
+            System.out.println("Map generated!");
         }
     }
 }
