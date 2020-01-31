@@ -8,18 +8,25 @@ import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.OutputStreamWriter;
 import java.awt.Point;
 import java.awt.Rectangle;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Random;
 import java.util.Scanner;
+import java.util.Map.Entry;
 
 import com.tylerroyer.molasses.*;
 import com.tylerroyer.molasses.events.DecrementIntegerEvent;
 import com.tylerroyer.molasses.events.Event;
 import com.tylerroyer.molasses.events.IncrementIntegerEvent;
 import com.tylerroyer.molasses.events.SetIntegerEvent;
+import com.tylerroyer.molasses.events.ToggleOnEvent;
 
+import org.apache.commons.lang3.mutable.MutableBoolean;
 import org.apache.commons.lang3.mutable.MutableInt;
 
 public class EditorScreen extends Screen {
@@ -36,6 +43,7 @@ public class EditorScreen extends Screen {
     private Color backgroundColor = new Color(190, 205, 190);
     private MutableInt zoom = new MutableInt(3);
     private MutableInt paintTileIndex = new MutableInt(-1);
+    private MutableBoolean readyToSave = new MutableBoolean(false);
     private ArrayList<Button> paintTileButtons = new ArrayList<>();
     private TileMap tileMap;
     private Camera camera = new Camera();
@@ -51,6 +59,7 @@ public class EditorScreen extends Screen {
     private Event zoomInEvent, zoomOutEvent;
     private Button zoomInButton, zoomOutButton;
     private Button moveButton, paintButton, propertiesButton;
+    private Button saveButton;
 
     public EditorScreen() {}
 
@@ -109,9 +118,12 @@ public class EditorScreen extends Screen {
         BufferedImage moveUnpressed = Resources.loadGraphicalImage("move_button_unpressed.png");
         BufferedImage paintUnpressed = Resources.loadGraphicalImage("paint_button_unpressed.png");
         BufferedImage propertiesUnpressed = Resources.loadGraphicalImage("properties_button_unpressed.png");
+        BufferedImage saveUnpressed = Resources.loadGraphicalImage("save_button_unpressed.png");
         moveButton = new Button(moveUnpressed, 9, 17, new SetIntegerEvent(mode, MODE_MOVE));
         paintButton = new Button(paintUnpressed, 9, 64, new SetIntegerEvent(mode, MODE_PAINT));
         propertiesButton = new Button(propertiesUnpressed, 9, 111, new SetIntegerEvent(mode, MODE_PROPERTIES));
+        saveButton = new Button(saveUnpressed, 9, MAP_OFFSET_Y + MAP_VIEWPORT_SIZE - 36, new ToggleOnEvent(readyToSave));
+        saveButton.setOutline(buttonOutline);
         zoomInButton.setOutline(buttonOutline);
         zoomOutButton.setOutline(buttonOutline);
     }
@@ -171,6 +183,7 @@ public class EditorScreen extends Screen {
         moveButton.render(g);
         paintButton.render(g);
         propertiesButton.render(g);
+        saveButton.render(g);
         if (mode.getValue() == MODE_PAINT) {
             for (Button b : paintTileButtons) {
                 b.render(g);
@@ -222,6 +235,7 @@ public class EditorScreen extends Screen {
         moveButton.update();
         paintButton.update();
         propertiesButton.update();
+        saveButton.update();
         if (mode.getValue() == MODE_PAINT) {
             for (Button b : paintTileButtons) {
                 b.update();
@@ -312,6 +326,57 @@ public class EditorScreen extends Screen {
                 tileMap.getTiles().get((int) p.getX()).get((int) p.getY()).setImageName(imageName);
             }
             paintTileIndex.setValue(-1);
+        }
+        
+        if (readyToSave.isTrue()) {
+            System.out.println("Saving...");
+            Game.getWindow().setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
+
+            try (FileOutputStream out = new FileOutputStream("TileMapEditor/src/main/java/res/map.dat")) {
+                OutputStreamWriter writer = new OutputStreamWriter(out);
+
+                // Write map size to file.
+                writer.write(tileMap.getTiles().size() + "\n");
+                writer.write(tileMap.getTiles().get(0).size() + "\n");
+
+                // Find default tile name.
+                HashMap<String, Integer> occurranceMap = new HashMap<>();
+                for (ArrayList<Tile> tiles : tileMap.getTiles()) {
+                    for (Tile t : tiles) {
+                        Integer count = occurranceMap.get(t.getImageName());
+                        occurranceMap.put(t.getImageName(), count == null ? 1 : count + 1);
+                    }
+                }
+                String defaultTileName = "";
+                int count = 0;
+                for (Entry<String, Integer> e : occurranceMap.entrySet()) {
+                    if (e.getValue() > count) {
+                        count = e.getValue();
+                        defaultTileName = e.getKey();
+                    }
+                }
+
+                // Write tiles to file.
+                writer.write(defaultTileName);
+                for (int i = 0; i < tileMap.getTiles().size(); i++) {
+                    for (int j = 0; j < tileMap.getTiles().get(0).size(); j++) {
+                        Tile t = tileMap.getTiles().get(i).get(j);
+                        if (t.getImageName().equals(defaultTileName))
+                            continue;
+                        writer.write('\n');
+                        writer.write(t.getImageName() + " " + i + " " + j);
+                    }
+                }
+
+                writer.flush();
+                writer.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            readyToSave.setFalse();
+
+            Game.getWindow().setCursor(Cursor.getDefaultCursor());
+            System.out.println("Saved!");
         }
     }
 }
