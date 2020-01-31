@@ -25,10 +25,12 @@ import com.tylerroyer.molasses.*;
 import com.tylerroyer.molasses.events.DecrementIntegerEvent;
 import com.tylerroyer.molasses.events.Event;
 import com.tylerroyer.molasses.events.IncrementIntegerEvent;
+import com.tylerroyer.molasses.events.MultiplyDoubleEvent;
 import com.tylerroyer.molasses.events.SetIntegerEvent;
 import com.tylerroyer.molasses.events.ToggleOnEvent;
 
 import org.apache.commons.lang3.mutable.MutableBoolean;
+import org.apache.commons.lang3.mutable.MutableDouble;
 import org.apache.commons.lang3.mutable.MutableInt;
 
 public class EditorScreen extends Screen {
@@ -45,11 +47,14 @@ public class EditorScreen extends Screen {
     private Color backgroundColor = new Color(190, 205, 190);
     private MutableInt zoom = new MutableInt(3);
     private MutableInt paintTileIndex = new MutableInt(-1);
+    private MutableInt tilePage = new MutableInt(0);
+    private MutableDouble cameraOffsetX = new MutableDouble(0.0);
+    private MutableDouble cameraOffsetY = new MutableDouble(0.0);
     private MutableBoolean readyToSave = new MutableBoolean(false);
     private MutableBoolean readyToGenerateMap = new MutableBoolean(false);
     private ArrayList<Button> paintTileButtons = new ArrayList<>();
     private TileMap tileMap;
-    private Camera camera = new Camera();
+    private Camera camera = new Camera(cameraOffsetX, cameraOffsetY);
     private BasicStroke buttonOutline = new BasicStroke(2);
     private Rectangle paintSelection = null;
     private ArrayList<Point> selectedTileLocations = new ArrayList<>();
@@ -63,6 +68,7 @@ public class EditorScreen extends Screen {
     private Button zoomInButton, zoomOutButton;
     private Button moveButton, paintButton, propertiesButton;
     private Button saveButton, mapButton;
+    private Button prevButton, nextButton;
 
     public EditorScreen() {}
 
@@ -108,7 +114,18 @@ public class EditorScreen extends Screen {
                 Resources.addGraphicalResource(tileName + "_zoom" + (j+1), Resources.scaleImage(baseImage, zoomLevels[j], zoomLevels[j]));
             }
 
-            paintTileButtons.add(new Button(baseImage, MAP_OFFSET_X + MAP_VIEWPORT_SIZE + 18, MAP_OFFSET_Y + i * 140, new SetIntegerEvent(paintTileIndex, i)));
+            int x;
+            int y;
+            if (i % 2 == 0) {
+                x = MAP_OFFSET_X + MAP_VIEWPORT_SIZE + 18;
+                y = MAP_OFFSET_Y + (i%8) / 2 * 140;
+            } else {
+                x = MAP_OFFSET_X + MAP_VIEWPORT_SIZE + 128 + 36;
+                y = MAP_OFFSET_Y + (i%8) / 2 * 140;
+            }
+            Button b = new Button(baseImage, x, y, new SetIntegerEvent(paintTileIndex, i));
+            b.setOutline(buttonOutline);
+            paintTileButtons.add(b);
         }
         
         Game.getWindow().setBackgroundColor(backgroundColor);
@@ -116,8 +133,16 @@ public class EditorScreen extends Screen {
         Font font = new Font("Helvetica", Font.PLAIN, 42);
         zoomInEvent = new IncrementIntegerEvent(zoom, 1, zoomLevels.length);
         zoomOutEvent = new DecrementIntegerEvent(zoom, 1, 1);
+        Event prevEvent = new DecrementIntegerEvent(tilePage, 1, 0);
+        Event nextEvent = new IncrementIntegerEvent(tilePage, 1, (paintTileButtons.size()-1) / 8);
         zoomInButton = new Button("Zoom in", font, new Color(128, 128, 128), Color.BLACK, 200, 50, MAP_OFFSET_X + MAP_VIEWPORT_SIZE - 420, MAP_OFFSET_Y + MAP_VIEWPORT_SIZE + 20, zoomInEvent);
+        zoomInButton.addEvent(new MultiplyDoubleEvent(cameraOffsetX, 2.0));
+        zoomInButton.addEvent(new MultiplyDoubleEvent(cameraOffsetY, 2.0));
         zoomOutButton = new Button("Zoom out", font, new Color(128, 128, 128), Color.BLACK, 200, 50, MAP_OFFSET_X + MAP_VIEWPORT_SIZE - 200, MAP_OFFSET_Y + MAP_VIEWPORT_SIZE + 20, zoomOutEvent);
+        zoomOutButton.addEvent(new MultiplyDoubleEvent(cameraOffsetX, 0.5));
+        zoomOutButton.addEvent(new MultiplyDoubleEvent(cameraOffsetY, 0.5));
+        prevButton = new Button("Prev", font, new Color(128, 128, 128), Color.BLACK, 110, 50, MAP_OFFSET_X + MAP_VIEWPORT_SIZE + 35, MAP_OFFSET_Y + MAP_VIEWPORT_SIZE - 65, prevEvent);
+        nextButton = new Button("Next", font, new Color(128, 128, 128), Color.BLACK, 110, 50, MAP_OFFSET_X + MAP_VIEWPORT_SIZE + 164, MAP_OFFSET_Y + MAP_VIEWPORT_SIZE - 65, nextEvent);
         BufferedImage moveUnpressed = Resources.loadGraphicalImage("move_button_unpressed.png");
         BufferedImage paintUnpressed = Resources.loadGraphicalImage("paint_button_unpressed.png");
         BufferedImage propertiesUnpressed = Resources.loadGraphicalImage("properties_button_unpressed.png");
@@ -132,6 +157,8 @@ public class EditorScreen extends Screen {
         mapButton.setOutline(buttonOutline);
         zoomInButton.setOutline(buttonOutline);
         zoomOutButton.setOutline(buttonOutline);
+        prevButton.setOutline(buttonOutline);
+        nextButton.setOutline(buttonOutline);
     }
 
     @Override
@@ -192,7 +219,10 @@ public class EditorScreen extends Screen {
         saveButton.render(g);
         mapButton.render(g);
         if (mode.getValue() == MODE_PAINT) {
-            for (Button b : paintTileButtons) {
+            prevButton.render(g);
+            nextButton.render(g);
+            for (int i = tilePage.getValue() * 8; i < tilePage.getValue() * 8 + 8 && i < paintTileButtons.size(); i++) {
+                Button b = paintTileButtons.get(i);
                 b.render(g);
             }
         }
@@ -237,15 +267,20 @@ public class EditorScreen extends Screen {
     @Override
     public void update() {
         // Buttons
-        zoomInButton.update();
-        zoomOutButton.update();
+        if (zoom.getValue() < zoomLevels.length)
+            zoomInButton.update();
+        if (zoom.getValue() > 1)
+            zoomOutButton.update();
         moveButton.update();
         paintButton.update();
         propertiesButton.update();
         saveButton.update();
         mapButton.update();
         if (mode.getValue() == MODE_PAINT) {
-            for (Button b : paintTileButtons) {
+            prevButton.update();
+            nextButton.update();
+            for (int i = tilePage.getValue() * 8; i < tilePage.getValue() * 8 + 8 && i < paintTileButtons.size(); i++) {
+                Button b = paintTileButtons.get(i);
                 b.update();
             }
         }
@@ -305,23 +340,25 @@ public class EditorScreen extends Screen {
                     } else {
                         if (wasMouseDownInViewport) {
                             // Just clicked up
-                            double x1 = (paintSelection.getX()) / getTileSize();
-                            double y1 = (paintSelection.getY()) / getTileSize();
-                            double x2 = (paintSelection.getX() + paintSelection.getWidth()) / getTileSize();
-                            double y2 = (paintSelection.getY() + paintSelection.getHeight()) / getTileSize();
+                            if (paintSelection != null) {
+                                double x1 = (paintSelection.getX()) / getTileSize();
+                                double y1 = (paintSelection.getY()) / getTileSize();
+                                double x2 = (paintSelection.getX() + paintSelection.getWidth()) / getTileSize();
+                                double y2 = (paintSelection.getY() + paintSelection.getHeight()) / getTileSize();
 
-                            for (int i = (int) x1; i <= (int) x2; i++) {
-                                for (int j = (int) y1; j <= (int) y2; j++) {
-                                    if (i < 0 || j < 0)
-                                        continue;
-                                    if (i >= tileMap.getTiles().size() || j >= tileMap.getTiles().get(0).size())
-                                        continue;
+                                for (int i = (int) x1; i <= (int) x2; i++) {
+                                    for (int j = (int) y1; j <= (int) y2; j++) {
+                                        if (i < 0 || j < 0)
+                                            continue;
+                                        if (i >= tileMap.getTiles().size() || j >= tileMap.getTiles().get(0).size())
+                                            continue;
 
-                                    selectedTileLocations.add(new Point(i, j));
+                                        selectedTileLocations.add(new Point(i, j));
+                                    }
                                 }
-                            }
 
-                            paintSelection = null;
+                                paintSelection = null;
+                            }
                         }
                         wasMouseDownInViewport = false;
                     }
@@ -381,7 +418,7 @@ public class EditorScreen extends Screen {
             } catch (IOException e) {
                 e.printStackTrace();
             }
-            
+
             readyToSave.setFalse();
             Game.getWindow().setCursor(Cursor.getDefaultCursor());
             System.out.println("Saved!");
