@@ -72,33 +72,8 @@ public class EditorScreen extends Screen {
 
     @Override
     public void loadResources() {
-        // Grab tile names from file.
-        try (Scanner scanner = new Scanner(new FileInputStream(new File("src/main/java/res/tile_names.dat")))) {
-            while(scanner.hasNextLine()) {
-                tileNames.add(scanner.nextLine());
-            }
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-        }
-
-        // Load tile map
-        // TileMapEditor/src/main/java/res/map.dat
-        try (Scanner scanner = new Scanner(new FileInputStream(new File("src/main/java/res/map.dat")))) {
-            int width = Integer.parseInt(scanner.nextLine());
-            int height = Integer.parseInt(scanner.nextLine());
-            tileMap = new TileMap(width, height);
-            tileMap.fillTileMap(scanner.nextLine());
-
-            while (scanner.hasNextLine()) {
-                String name = scanner.next();
-                int x = scanner.nextInt();
-                int y = scanner.nextInt();
-
-                tileMap.setTile(x, y, name);
-            }
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-        }
+        tileMap = new TileMap("map.dat");
+        tileNames = tileMap.getTileNames();
 
         for (int i = 0; i < tileNames.size(); i++) {
             String tileName = tileNames.get(i);
@@ -376,6 +351,12 @@ public class EditorScreen extends Screen {
 
             try (FileOutputStream out = new FileOutputStream("TileMapEditor/src/main/java/res/map.dat")) {
                 OutputStreamWriter writer = new OutputStreamWriter(out);
+
+                // Write tile names to file.
+                for (String name : tileNames) {
+                    writer.write(name + "\n");
+                }
+                writer.write(";\n");
 
                 // Write map size to file.
                 writer.write(tileMap.getWidth() + "\n");
