@@ -3,7 +3,6 @@ package com.tylerroyer.tilemapeditor;
 import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Cursor;
-import java.awt.Font;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.FileInputStream;
@@ -132,19 +131,18 @@ public class EditorScreen extends Screen {
         
         Game.getWindow().setBackgroundColor(backgroundColor);
 
-        Font font = new Font("Helvetica", Font.PLAIN, 42);
         zoomInEvent = new IncrementIntegerEvent(zoom, 1, zoomLevels.length);
         zoomOutEvent = new DecrementIntegerEvent(zoom, 1, 1);
         Event prevEvent = new DecrementIntegerEvent(tilePage, 1, 0);
         Event nextEvent = new IncrementIntegerEvent(tilePage, 1, (paintTileButtons.size()-1) / 8);
-        zoomInButton = new Button("Zoom in", font, new Color(128, 128, 128), Color.BLACK, 200, 50, MAP_OFFSET_X + MAP_VIEWPORT_SIZE - 420, MAP_OFFSET_Y + MAP_VIEWPORT_SIZE + 20, zoomInEvent);
+        zoomInButton = new Button("Zoom in", Config.gameFont, new Color(128, 128, 128), Color.BLACK, 200, 50, MAP_OFFSET_X + MAP_VIEWPORT_SIZE - 420, MAP_OFFSET_Y + MAP_VIEWPORT_SIZE + 20, zoomInEvent);
         zoomInButton.addEvent(new MultiplyDoubleEvent(cameraOffsetX, 2.0));
         zoomInButton.addEvent(new MultiplyDoubleEvent(cameraOffsetY, 2.0));
-        zoomOutButton = new Button("Zoom out", font, new Color(128, 128, 128), Color.BLACK, 200, 50, MAP_OFFSET_X + MAP_VIEWPORT_SIZE - 200, MAP_OFFSET_Y + MAP_VIEWPORT_SIZE + 20, zoomOutEvent);
+        zoomOutButton = new Button("Zoom out", Config.gameFont, new Color(128, 128, 128), Color.BLACK, 200, 50, MAP_OFFSET_X + MAP_VIEWPORT_SIZE - 200, MAP_OFFSET_Y + MAP_VIEWPORT_SIZE + 20, zoomOutEvent);
         zoomOutButton.addEvent(new MultiplyDoubleEvent(cameraOffsetX, 0.5));
         zoomOutButton.addEvent(new MultiplyDoubleEvent(cameraOffsetY, 0.5));
-        prevButton = new Button("Prev", font, new Color(128, 128, 128), Color.BLACK, 110, 50, MAP_OFFSET_X + MAP_VIEWPORT_SIZE + 35, MAP_OFFSET_Y + MAP_VIEWPORT_SIZE - 65, prevEvent);
-        nextButton = new Button("Next", font, new Color(128, 128, 128), Color.BLACK, 110, 50, MAP_OFFSET_X + MAP_VIEWPORT_SIZE + 164, MAP_OFFSET_Y + MAP_VIEWPORT_SIZE - 65, nextEvent);
+        prevButton = new Button("Prev", Config.gameFont, new Color(128, 128, 128), Color.BLACK, 110, 50, MAP_OFFSET_X + MAP_VIEWPORT_SIZE + 35, MAP_OFFSET_Y + MAP_VIEWPORT_SIZE - 65, prevEvent);
+        nextButton = new Button("Next", Config.gameFont, new Color(128, 128, 128), Color.BLACK, 110, 50, MAP_OFFSET_X + MAP_VIEWPORT_SIZE + 164, MAP_OFFSET_Y + MAP_VIEWPORT_SIZE - 65, nextEvent);
         BufferedImage moveUnpressed = Resources.loadGraphicalImage("move_button_unpressed.png");
         BufferedImage paintUnpressed = Resources.loadGraphicalImage("paint_button_unpressed.png");
         BufferedImage propertiesUnpressed = Resources.loadGraphicalImage("properties_button_unpressed.png");
@@ -211,7 +209,7 @@ public class EditorScreen extends Screen {
         g.drawRect((int) viewportBounds.getX() - BOARDER_WIDTH/2, (int) viewportBounds.getY() - BOARDER_WIDTH/2, (int) viewportBounds.getWidth() + BOARDER_WIDTH, (int) viewportBounds.getHeight() + BOARDER_WIDTH);
 
         // Draw zoom level
-        g.setFont(new Font("Helvetica", Font.PLAIN, 42));
+        g.setFont(Config.gameFont);
         g.setColor(Color.BLACK);
         g.drawString("Zoom: " + zoom.getValue(), MAP_OFFSET_X + 20, MAP_OFFSET_Y + MAP_VIEWPORT_SIZE + 60);
 
@@ -237,7 +235,7 @@ public class EditorScreen extends Screen {
             try {
                 int infoX = MAP_OFFSET_X + MAP_VIEWPORT_SIZE + 18, infoY = MAP_OFFSET_Y;
 
-                g.setFont(new Font("Helvetica", Font.PLAIN, 16));
+                g.setFont(Config.gameFont.deriveFont(16.0f));
 
                 t = tileMap.getTiles().get(hoveredTileLocation.x).get(hoveredTileLocation.y);
                 BufferedImage image = Resources.getGraphicalResource(t.getImageName());
@@ -248,7 +246,7 @@ public class EditorScreen extends Screen {
                 System.err.println("Trying to display info about an out-of-bounds tile!");
             }
         } else if (mode.getValue() != MODE_PAINT) {
-            g.setFont(new Font("Helvetica", Font.PLAIN, 18));
+            g.setFont(Config.gameFont.deriveFont(18.0f));
             g.drawString("Hover over a tile to see tile info.", MAP_OFFSET_X + MAP_VIEWPORT_SIZE + 18, MAP_OFFSET_Y + 20);
             g.drawString("Click and drag to move the map.", MAP_OFFSET_X + MAP_VIEWPORT_SIZE + 18, MAP_OFFSET_Y + 50);
         }
