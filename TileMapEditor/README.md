@@ -15,9 +15,9 @@ This will likely change in the future, but it was just a quick way to significan
 tileX and tileY locations that will be overwritten to this new tile.   
    
 ## Attributions
-Data List Icon, Diy Paint Brush Icon: [http://www.iconarchive.com/artist/icons8.html]   
-Cursor Move Icon: [http://www.iconarchive.com/artist/iconsmind.html]   
-Save Icon: [http://www.iconarchive.com/artist/custom-icon-design.html]   
-Folded paper map: [https://www.flaticon.com/authors/freepik]   
+Data List Icon, Diy Paint Brush Icon: http://www.iconarchive.com/artist/icons8.html   
+Cursor Move Icon: http://www.iconarchive.com/artist/iconsmind.html   
+Save Icon: http://www.iconarchive.com/artist/custom-icon-design.html   
+Folded paper map: https://www.flaticon.com/authors/freepik   
    
-**For more code by Tyler Royer, including the engine used to make the Molasses Tile Editor, visit [https://github.com/Hades948?tab=repositories]**
+**For more code by Tyler Royer, including the engine used to make the Molasses Tile Editor, visit https://github.com/Hades948?tab=repositories**
