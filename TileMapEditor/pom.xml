@@ -33,7 +33,7 @@
     <dependency>
       <groupId>com.tylerroyer.molasses</groupId>
       <artifactId>MolassesEngine</artifactId>
-      <version>0.2.15</version>
+      <version>0.2.16</version>
     </dependency>
   </dependencies>
 

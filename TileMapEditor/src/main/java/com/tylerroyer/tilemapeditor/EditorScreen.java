@@ -4,7 +4,6 @@ import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Cursor;
 import java.awt.Font;
-import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.FileInputStream;
@@ -14,7 +13,6 @@ import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.awt.Point;
 import java.awt.Rectangle;
-import java.awt.RenderingHints;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Scanner;
@@ -76,7 +74,7 @@ public class EditorScreen extends Screen {
     @Override
     public void loadResources() {
         // Grab tile names from file.
-        try (Scanner scanner = new Scanner(new FileInputStream(new File("TileMapEditor/src/main/java/res/tile_names.dat")))) {
+        try (Scanner scanner = new Scanner(new FileInputStream(new File("src/main/java/res/tile_names.dat")))) {
             while(scanner.hasNextLine()) {
                 tileNames.add(scanner.nextLine());
             }
@@ -85,7 +83,8 @@ public class EditorScreen extends Screen {
         }
 
         // Load tile map
-        try (Scanner scanner = new Scanner(new FileInputStream(new File("TileMapEditor/src/main/java/res/map.dat")))) {
+        // TileMapEditor/src/main/java/res/map.dat
+        try (Scanner scanner = new Scanner(new FileInputStream(new File("src/main/java/res/map.dat")))) {
             int width = Integer.parseInt(scanner.nextLine());
             int height = Integer.parseInt(scanner.nextLine());
             tileMap = new TileMap(width, height);
@@ -166,6 +165,8 @@ public class EditorScreen extends Screen {
 
     @Override
     public void render(GameGraphics g) {
+        g.setCamera(camera);
+
         Tile t;
         Rectangle viewportBounds = new Rectangle(MAP_OFFSET_X, MAP_OFFSET_Y, MAP_VIEWPORT_SIZE, MAP_VIEWPORT_SIZE);
         g.setClip(viewportBounds);
@@ -173,7 +174,7 @@ public class EditorScreen extends Screen {
             for (int j = 0; j < tileMap.getTiles().get(i).size(); j++) {
                 t = tileMap.getTiles().get(i).get(j);
                 BufferedImage image = Resources.getGraphicalResource(t.getImageName() + "_zoom" + zoom);
-                g.drawImage(image, i * getTileSize() + MAP_OFFSET_X + camera.getOffsetX(), j * getTileSize() + MAP_OFFSET_Y + camera.getOffsetY(), Game.getWindow());
+                g.drawImage(image, i * getTileSize() + MAP_OFFSET_X, j * getTileSize() + MAP_OFFSET_Y, Game.getWindow());
             }
         }
 
@@ -183,25 +184,26 @@ public class EditorScreen extends Screen {
                 if (isMouseOverMap() && isMouseInViewport()) {
                     // Draw selector
                     g.setColor(new Color(255, 255, 255, 100));
-                    g.fillRect(hoveredTileLocation.getX() * getTileSize() + MAP_OFFSET_X + camera.getOffsetX(), hoveredTileLocation.getY() * getTileSize() + MAP_OFFSET_Y + camera.getOffsetY(), getTileSize(), getTileSize());
+                    g.fillRect(hoveredTileLocation.getX() * getTileSize() + MAP_OFFSET_X, hoveredTileLocation.getY() * getTileSize() + MAP_OFFSET_Y, getTileSize(), getTileSize());
                 }
                 break;
             case MODE_PAINT:
                 // Draw paint selector
                 if (paintSelection != null) {
                     g.setColor(Color.RED);
-                    g.drawRect(paintSelection.getX() + MAP_OFFSET_X + camera.getOffsetX(), paintSelection.getY() + MAP_OFFSET_Y + camera.getOffsetY(), paintSelection.getWidth(), paintSelection.getHeight());// TODO I'd like to just pass this as a rectangle, if possible.
+                    g.drawRect(paintSelection.getX() + MAP_OFFSET_X, paintSelection.getY() + MAP_OFFSET_Y, paintSelection.getWidth(), paintSelection.getHeight());// TODO I'd like to just pass this as a rectangle, if possible.
                 }
 
                 // Draw highlight for selected tiles
                 g.setColor(new Color(255, 255, 255, 100));
                 for (Point p : selectedTileLocations) {
-                    g.fillRect(p.getX() * getTileSize() + MAP_OFFSET_X + camera.getOffsetX(), p.getY() * getTileSize() + MAP_OFFSET_Y + camera.getOffsetY(), getTileSize(), getTileSize());
+                    g.fillRect(p.getX() * getTileSize() + MAP_OFFSET_X, p.getY() * getTileSize() + MAP_OFFSET_Y, getTileSize(), getTileSize());
                 }
                 break;
         }
 
         g.clearClip();
+        g.setCamera(null);
 
         // Draw square around viewport
         g.setStroke(new BasicStroke(BOARDER_WIDTH));
