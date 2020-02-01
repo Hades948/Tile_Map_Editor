@@ -87,20 +87,14 @@ public class EditorScreen extends Screen {
             int width = Integer.parseInt(scanner.nextLine());
             int height = Integer.parseInt(scanner.nextLine());
             tileMap = new TileMap(width, height);
-
-            String defaultTileName = scanner.nextLine();
-            for (ArrayList<Tile> tiles : tileMap.getTiles()) {
-                for (Tile t : tiles) {
-                    t.setImageName(defaultTileName);
-                }
-            }
+            tileMap.fillTileMap(scanner.nextLine());
 
             while (scanner.hasNextLine()) {
                 String name = scanner.next();
                 int x = scanner.nextInt();
                 int y = scanner.nextInt();
 
-                tileMap.getTiles().get(x).get(y).setImageName(name);
+                tileMap.setTile(x, y, name);
             }
         } catch (FileNotFoundException e) {
             e.printStackTrace();
@@ -168,9 +162,9 @@ public class EditorScreen extends Screen {
         Tile t;
         Rectangle viewportBounds = new Rectangle(MAP_OFFSET_X, MAP_OFFSET_Y, MAP_VIEWPORT_SIZE, MAP_VIEWPORT_SIZE);
         g.setClip(viewportBounds);
-        for (int i = 0; i < tileMap.getTiles().size(); i++) {
-            for (int j = 0; j < tileMap.getTiles().get(i).size(); j++) {
-                t = tileMap.getTiles().get(i).get(j);
+        for (int i = 0; i < tileMap.getWidth(); i++) {
+            for (int j = 0; j < tileMap.getHeight(); j++) {
+                t = tileMap.getTile(i, j);
                 BufferedImage image = Resources.getGraphicalResource(t.getImageName() + "_zoom" + zoom);
                 g.drawImage(image, i * getTileSize() + MAP_OFFSET_X, j * getTileSize() + MAP_OFFSET_Y, Game.getWindow());
             }
@@ -237,7 +231,7 @@ public class EditorScreen extends Screen {
 
                 g.setFont(Config.gameFont.deriveFont(16.0f));
 
-                t = tileMap.getTiles().get(hoveredTileLocation.x).get(hoveredTileLocation.y);
+                t = tileMap.getTile(hoveredTileLocation.x, hoveredTileLocation.y);
                 BufferedImage image = Resources.getGraphicalResource(t.getImageName());
                 g.drawImage(image, infoX, infoY);
                 g.drawString(t.getImageName(), infoX, infoY + 147);
@@ -259,8 +253,8 @@ public class EditorScreen extends Screen {
     private boolean isMouseOverMap() {
         return mouseRelativeToMap.x - camera.getOffsetX() > 0
             && mouseRelativeToMap.y - camera.getOffsetY() > 0
-            && mouseRelativeToMap.x - camera.getOffsetX() < getTileSize() * tileMap.getTiles().size()
-            && mouseRelativeToMap.y - camera.getOffsetY() < getTileSize() * tileMap.getTiles().get(0).size();
+            && mouseRelativeToMap.x - camera.getOffsetX() < getTileSize() * tileMap.getWidth()
+            && mouseRelativeToMap.y - camera.getOffsetY() < getTileSize() * tileMap.getHeight();
     }
 
     private double getTileSize() {
@@ -353,7 +347,7 @@ public class EditorScreen extends Screen {
                                     for (int j = (int) y1; j <= (int) y2; j++) {
                                         if (i < 0 || j < 0)
                                             continue;
-                                        if (i >= tileMap.getTiles().size() || j >= tileMap.getTiles().get(0).size())
+                                        if (i >= tileMap.getWidth() || j >= tileMap.getHeight())
                                             continue;
 
                                         selectedTileLocations.add(new Point(i, j));
@@ -371,7 +365,7 @@ public class EditorScreen extends Screen {
         if (mode.getValue() == MODE_PAINT && paintTileIndex.getValue() >= 0) {
             for (Point p : selectedTileLocations) {
                 String imageName = tileNames.get(paintTileIndex.getValue());
-                tileMap.getTiles().get((int) p.getX()).get((int) p.getY()).setImageName(imageName);
+                tileMap.getTile((int) p.getX(), (int) p.getY()).setImageName(imageName);
             }
             paintTileIndex.setValue(-1);
         }
@@ -384,13 +378,14 @@ public class EditorScreen extends Screen {
                 OutputStreamWriter writer = new OutputStreamWriter(out);
 
                 // Write map size to file.
-                writer.write(tileMap.getTiles().size() + "\n");
-                writer.write(tileMap.getTiles().get(0).size() + "\n");
+                writer.write(tileMap.getWidth() + "\n");
+                writer.write(tileMap.getHeight() + "\n");
 
                 // Find default tile name.
                 HashMap<String, Integer> occurranceMap = new HashMap<>();
-                for (ArrayList<Tile> tiles : tileMap.getTiles()) {
-                    for (Tile t : tiles) {
+                for (int i = 0; i < tileMap.getWidth(); i++) {
+                    for (int j = 0; j < tileMap.getHeight(); j++) {
+                        Tile t = tileMap.getTile(i, j);
                         Integer count = occurranceMap.get(t.getImageName());
                         occurranceMap.put(t.getImageName(), count == null ? 1 : count + 1);
                     }
@@ -406,9 +401,9 @@ public class EditorScreen extends Screen {
 
                 // Write tiles to file.
                 writer.write(defaultTileName);
-                for (int i = 0; i < tileMap.getTiles().size(); i++) {
-                    for (int j = 0; j < tileMap.getTiles().get(0).size(); j++) {
-                        Tile t = tileMap.getTiles().get(i).get(j);
+                for (int i = 0; i < tileMap.getWidth(); i++) {
+                    for (int j = 0; j < tileMap.getHeight(); j++) {
+                        Tile t = tileMap.getTile(i, j);
                         if (t.getImageName().equals(defaultTileName))
                             continue;
                         writer.write('\n');
@@ -449,13 +444,13 @@ public class EditorScreen extends Screen {
                 colorValues.put(name, new Color(r/count, g/count, b/count));
             }
 
-            int width = tileMap.getTiles().size();
-            int height = tileMap.getTiles().get(0).size();
+            int width = tileMap.getWidth();
+            int height = tileMap.getHeight();
             BufferedImage map = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
 
             for (int x = 0; x < width; x++) {
                 for (int y = 0; y < height; y++) {
-                    Tile t = tileMap.getTiles().get(x).get(y);
+                    Tile t = tileMap.getTile(x, y);
                     map.setRGB(x, y, colorValues.get(t.getImageName()).getRGB());
                 }
             }
