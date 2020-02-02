@@ -73,11 +73,13 @@ public class EditorScreen extends Screen {
 
         for (int i = 0; i < tileNames.size(); i++) {
             String tileName = tileNames.get(i);
-            BufferedImage baseImage = Resources.loadGraphicalImage(tileName);
-            baseImage = Resources.scaleImage(baseImage, 128/baseImage.getWidth(), 128/baseImage.getHeight());
+            GraphicalResource baseImage = new StaticGraphicalResource (Resources.loadGraphicalImage(tileName));
+            baseImage.scaleResource(128/baseImage.getWidth(), 128/baseImage.getHeight());
             Resources.addGraphicalResource(tileName, baseImage);
-            for (int j = 0; j < zoomLevels.length; j++) {
-                Resources.addGraphicalResource(tileName + "_zoom" + (j+1), Resources.scaleImage(baseImage, zoomLevels[j], zoomLevels[j]));
+            for (int zoomLevelIndex = 0; zoomLevelIndex < zoomLevels.length; zoomLevelIndex++) {
+                GraphicalResource scaledImage = new StaticGraphicalResource(Util.copyBufferedImage(baseImage.getImage())); // TODO I need a copy constructor or something instead of this.
+                scaledImage.scaleResource(zoomLevels[zoomLevelIndex], zoomLevels[zoomLevelIndex]);
+                Resources.addGraphicalResource(tileName + "_zoom" + (zoomLevelIndex+1), scaledImage);
             }
 
             int x;
@@ -108,11 +110,11 @@ public class EditorScreen extends Screen {
         zoomOutButton.addEvent(new MultiplyDoubleEvent(cameraOffsetY, 0.5));
         prevButton = new Button("Prev", Config.gameFont, new Color(128, 128, 128), Color.BLACK, 110, 50, MAP_OFFSET_X + MAP_VIEWPORT_SIZE + 35, MAP_OFFSET_Y + MAP_VIEWPORT_SIZE - 65, prevEvent);
         nextButton = new Button("Next", Config.gameFont, new Color(128, 128, 128), Color.BLACK, 110, 50, MAP_OFFSET_X + MAP_VIEWPORT_SIZE + 164, MAP_OFFSET_Y + MAP_VIEWPORT_SIZE - 65, nextEvent);
-        BufferedImage moveUnpressed = Resources.loadGraphicalImage("move_button_unpressed.png");
-        BufferedImage paintUnpressed = Resources.loadGraphicalImage("paint_button_unpressed.png");
-        BufferedImage propertiesUnpressed = Resources.loadGraphicalImage("properties_button_unpressed.png");
-        BufferedImage saveUnpressed = Resources.loadGraphicalImage("save_button_unpressed.png");
-        BufferedImage mapUnpressed = Resources.loadGraphicalImage("map_button_unpressed.png");
+        GraphicalResource moveUnpressed = new StaticGraphicalResource(Resources.loadGraphicalImage("move_button_unpressed.png"));
+        GraphicalResource paintUnpressed = new StaticGraphicalResource(Resources.loadGraphicalImage("paint_button_unpressed.png"));
+        GraphicalResource propertiesUnpressed = new StaticGraphicalResource(Resources.loadGraphicalImage("properties_button_unpressed.png"));
+        GraphicalResource saveUnpressed = new StaticGraphicalResource(Resources.loadGraphicalImage("save_button_unpressed.png"));
+        GraphicalResource mapUnpressed = new StaticGraphicalResource(Resources.loadGraphicalImage("map_button_unpressed.png"));
         moveButton = new Button(moveUnpressed, 9, 17, new SetIntegerEvent(mode, MODE_MOVE));
         paintButton = new Button(paintUnpressed, 9, 64, new SetIntegerEvent(mode, MODE_PAINT));
         propertiesButton = new Button(propertiesUnpressed, 9, 111, new SetIntegerEvent(mode, MODE_PROPERTIES));
@@ -136,7 +138,7 @@ public class EditorScreen extends Screen {
         for (int i = 0; i < tileMap.getWidth(); i++) {
             for (int j = 0; j < tileMap.getHeight(); j++) {
                 t = tileMap.getTile(i, j);
-                BufferedImage image = Resources.getGraphicalResource(t.getImageName() + "_zoom" + zoom);
+                BufferedImage image = Resources.getGraphicalResource(t.getImageName() + "_zoom" + zoom).getImage();
                 g.drawImage(image, i * getTileSize() + MAP_OFFSET_X, j * getTileSize() + MAP_OFFSET_Y, Game.getWindow());
             }
         }
@@ -203,7 +205,7 @@ public class EditorScreen extends Screen {
                 g.setFont(Config.gameFont.deriveFont(16.0f));
 
                 t = tileMap.getTile(hoveredTileLocation.x, hoveredTileLocation.y);
-                BufferedImage image = Resources.getGraphicalResource(t.getImageName());
+                BufferedImage image = Resources.getGraphicalResource(t.getImageName()).getImage();
                 g.drawImage(image, infoX, infoY);
                 g.drawString(t.getImageName(), infoX, infoY + 147);
                 g.drawString("(" + hoveredTileLocation.x + ", " + hoveredTileLocation.y + ")", infoX, infoY + 172);
@@ -229,7 +231,7 @@ public class EditorScreen extends Screen {
     }
 
     private double getTileSize() {
-        return Resources.getResourceSize("grass.png").getWidth() * zoomLevels[zoom.getValue() - 1];
+        return Resources.getGraphicalResource("grass.png").getWidth() * zoomLevels[zoom.getValue() - 1];
     }
     
     @Override
@@ -406,7 +408,7 @@ public class EditorScreen extends Screen {
             // Sample all tile types.
             HashMap<String, Color> colorValues = new HashMap<>();
             for (String name : tileNames) {
-                BufferedImage image = Resources.getGraphicalResource(name);
+                BufferedImage image = Resources.getGraphicalResource(name).getImage();
                 int r = 0, g = 0, b = 0, count = 0;
                 for (int x = 0; x < image.getWidth(); x++) {
                     for (int y = 0; y < image.getHeight(); y++) {
