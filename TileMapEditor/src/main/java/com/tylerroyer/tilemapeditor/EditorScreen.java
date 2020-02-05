@@ -16,12 +16,7 @@ import java.util.Map.Entry;
 import javax.imageio.ImageIO;
 
 import com.tylerroyer.molasses.*;
-import com.tylerroyer.molasses.events.DecrementIntegerEvent;
-import com.tylerroyer.molasses.events.Event;
-import com.tylerroyer.molasses.events.IncrementIntegerEvent;
-import com.tylerroyer.molasses.events.MultiplyDoubleEvent;
-import com.tylerroyer.molasses.events.SetIntegerEvent;
-import com.tylerroyer.molasses.events.ToggleOnEvent;
+import com.tylerroyer.molasses.events.*;
 
 import org.apache.commons.lang3.mutable.MutableBoolean;
 import org.apache.commons.lang3.mutable.MutableDouble;
@@ -34,16 +29,15 @@ public class EditorScreen extends Screen {
     private MutableInt mode = new MutableInt(MODE_MOVE);
 
     private boolean wasMouseDownInViewport = false;
-    private double[] zoomLevels = { 0.03125, 0.0625, 0.125, 0.25 };
     private Point mouseRelativeToMap = new Point();
     private Point hoveredTileLocation = new Point();
     private Point clickDownPoint = new Point();
     private Color backgroundColor = new Color(190, 205, 190);
-    private MutableInt zoom = new MutableInt(3);
-    private MutableInt paintTileIndex = new MutableInt(-1);
+    private StringBuffer paintTileName = new StringBuffer();
     private MutableInt tilePage = new MutableInt(0);
     private MutableDouble cameraOffsetX = new MutableDouble(0.0);
     private MutableDouble cameraOffsetY = new MutableDouble(0.0);
+    private MutableInt zoomIndex = new MutableInt(3);
     private MutableBoolean readyToSave = new MutableBoolean(false);
     private MutableBoolean readyToGenerateMap = new MutableBoolean(false);
     private ArrayList<Button> paintTileButtons = new ArrayList<>();
@@ -52,7 +46,6 @@ public class EditorScreen extends Screen {
     private BasicStroke buttonOutline = new BasicStroke(2);
     private Rectangle paintSelection = null;
     private ArrayList<Point> selectedTileLocations = new ArrayList<>();
-    private ArrayList<String> tileNames = new ArrayList<>();
 
     private final int MAP_OFFSET_X = 54, MAP_OFFSET_Y = 18;
     private final int MAP_VIEWPORT_SIZE = 640;
@@ -67,21 +60,12 @@ public class EditorScreen extends Screen {
     public EditorScreen() {}
 
     @Override
-    public void loadResources() {
-        tileMap = new TileMap("map.dat");
-        tileNames = tileMap.getTileNames();
+    public void onFocus() {
+        tileMap = new TileMap(MAP_OFFSET_X, MAP_OFFSET_Y, "map.mtm");
+        HashMap<String, FlipBook> tileMappings = tileMap.getTileMappings();
 
-        for (int i = 0; i < tileNames.size(); i++) {
-            String tileName = tileNames.get(i);
-            GraphicalResource baseImage = new StaticGraphicalResource (Resources.loadGraphicalImage(tileName));
-            baseImage.scaleResource(128/baseImage.getWidth(), 128/baseImage.getHeight());
-            Resources.addGraphicalResource(tileName, baseImage);
-            for (int zoomLevelIndex = 0; zoomLevelIndex < zoomLevels.length; zoomLevelIndex++) {
-                GraphicalResource scaledImage = new StaticGraphicalResource(Util.copyBufferedImage(baseImage.getImage())); // TODO I need a copy constructor or something instead of this.
-                scaledImage.scaleResource(zoomLevels[zoomLevelIndex], zoomLevels[zoomLevelIndex]);
-                Resources.addGraphicalResource(tileName + "_zoom" + (zoomLevelIndex+1), scaledImage);
-            }
-
+        int i = 0;
+        for (Entry<String, FlipBook> tileMapping : tileMappings.entrySet()) {
             int x;
             int y;
             if (i % 2 == 0) {
@@ -91,15 +75,26 @@ public class EditorScreen extends Screen {
                 x = MAP_OFFSET_X + MAP_VIEWPORT_SIZE + 128 + 36;
                 y = MAP_OFFSET_Y + (i%8) / 2 * 140;
             }
-            Button b = new Button(baseImage, x, y, new SetIntegerEvent(paintTileIndex, i));
+            Button b = new Button(new FlipBook(tileMapping.getValue()), x, y, new SetStringEvent(paintTileName, tileMapping.getKey()));
             b.setOutline(buttonOutline);
             paintTileButtons.add(b);
+
+            i++;
         }
         
         Game.getWindow().setBackgroundColor(backgroundColor);
 
-        zoomInEvent = new IncrementIntegerEvent(zoom, 1, zoomLevels.length);
-        zoomOutEvent = new DecrementIntegerEvent(zoom, 1, 1);
+        ArrayList<Double> zoomLevels = new ArrayList<>();
+        zoomLevels.add(0.03125);
+        zoomLevels.add(0.0625);
+        zoomLevels.add(0.125);
+        zoomLevels.add(0.25);
+        zoomLevels.add(0.5);
+        zoomLevels.add(1.0);
+        zoomLevels.add(2.0);
+
+        zoomOutEvent = new DecrementIntegerEvent(zoomIndex, 1, 0);
+        zoomInEvent = new IncrementIntegerEvent(zoomIndex, 1, zoomLevels.size()-1);
         Event prevEvent = new DecrementIntegerEvent(tilePage, 1, 0);
         Event nextEvent = new IncrementIntegerEvent(tilePage, 1, (paintTileButtons.size()-1) / 8);
         zoomInButton = new Button("Zoom in", Config.gameFont, new Color(128, 128, 128), Color.BLACK, 200, 50, MAP_OFFSET_X + MAP_VIEWPORT_SIZE - 420, MAP_OFFSET_Y + MAP_VIEWPORT_SIZE + 20, zoomInEvent);
@@ -110,11 +105,11 @@ public class EditorScreen extends Screen {
         zoomOutButton.addEvent(new MultiplyDoubleEvent(cameraOffsetY, 0.5));
         prevButton = new Button("Prev", Config.gameFont, new Color(128, 128, 128), Color.BLACK, 110, 50, MAP_OFFSET_X + MAP_VIEWPORT_SIZE + 35, MAP_OFFSET_Y + MAP_VIEWPORT_SIZE - 65, prevEvent);
         nextButton = new Button("Next", Config.gameFont, new Color(128, 128, 128), Color.BLACK, 110, 50, MAP_OFFSET_X + MAP_VIEWPORT_SIZE + 164, MAP_OFFSET_Y + MAP_VIEWPORT_SIZE - 65, nextEvent);
-        GraphicalResource moveUnpressed = new StaticGraphicalResource(Resources.loadGraphicalImage("move_button_unpressed.png"));
-        GraphicalResource paintUnpressed = new StaticGraphicalResource(Resources.loadGraphicalImage("paint_button_unpressed.png"));
-        GraphicalResource propertiesUnpressed = new StaticGraphicalResource(Resources.loadGraphicalImage("properties_button_unpressed.png"));
-        GraphicalResource saveUnpressed = new StaticGraphicalResource(Resources.loadGraphicalImage("save_button_unpressed.png"));
-        GraphicalResource mapUnpressed = new StaticGraphicalResource(Resources.loadGraphicalImage("map_button_unpressed.png"));
+        FlipBook moveUnpressed = new FlipBook(0, new Page("move_button_unpressed.png"));
+        FlipBook paintUnpressed = new FlipBook(0, new Page("paint_button_unpressed.png"));
+        FlipBook propertiesUnpressed = new FlipBook(0, new Page("properties_button_unpressed.png"));
+        FlipBook saveUnpressed = new FlipBook(0, new Page("save_button_unpressed.png"));
+        FlipBook mapUnpressed = new FlipBook(0, new Page("map_button_unpressed.png"));
         moveButton = new Button(moveUnpressed, 9, 17, new SetIntegerEvent(mode, MODE_MOVE));
         paintButton = new Button(paintUnpressed, 9, 64, new SetIntegerEvent(mode, MODE_PAINT));
         propertiesButton = new Button(propertiesUnpressed, 9, 111, new SetIntegerEvent(mode, MODE_PROPERTIES));
@@ -126,30 +121,27 @@ public class EditorScreen extends Screen {
         zoomOutButton.setOutline(buttonOutline);
         prevButton.setOutline(buttonOutline);
         nextButton.setOutline(buttonOutline);
+
+        tileMap.prepareTileMapForScaling(zoomIndex, 5, zoomLevels);
     }
 
     @Override
     public void render(GameGraphics g) {
         g.setCamera(camera);
 
-        Tile t;
         Rectangle viewportBounds = new Rectangle(MAP_OFFSET_X, MAP_OFFSET_Y, MAP_VIEWPORT_SIZE, MAP_VIEWPORT_SIZE);
         g.setClip(viewportBounds);
-        for (int i = 0; i < tileMap.getWidth(); i++) {
-            for (int j = 0; j < tileMap.getHeight(); j++) {
-                t = tileMap.getTile(i, j);
-                BufferedImage image = Resources.getGraphicalResource(t.getImageName() + "_zoom" + zoom).getImage();
-                g.drawImage(image, i * getTileSize() + MAP_OFFSET_X, j * getTileSize() + MAP_OFFSET_Y, Game.getWindow());
-            }
-        }
 
+        tileMap.render(g);
+
+        double tileSize = tileMap.getTileSize();
         switch(mode.getValue()) {
             default:
             case MODE_MOVE:
                 if (isMouseOverMap() && isMouseInViewport()) {
                     // Draw selector
                     g.setColor(new Color(255, 255, 255, 100));
-                    g.fillRect(hoveredTileLocation.getX() * getTileSize() + MAP_OFFSET_X, hoveredTileLocation.getY() * getTileSize() + MAP_OFFSET_Y, getTileSize(), getTileSize());
+                    g.fillRect(hoveredTileLocation.getX() * tileSize + MAP_OFFSET_X, hoveredTileLocation.getY() * tileSize + MAP_OFFSET_Y, tileSize, tileSize);
                 }
                 break;
             case MODE_PAINT:
@@ -162,7 +154,7 @@ public class EditorScreen extends Screen {
                 // Draw highlight for selected tiles
                 g.setColor(new Color(255, 255, 255, 100));
                 for (Point p : selectedTileLocations) {
-                    g.fillRect(p.getX() * getTileSize() + MAP_OFFSET_X, p.getY() * getTileSize() + MAP_OFFSET_Y, getTileSize(), getTileSize());
+                    g.fillRect(p.getX() * tileSize + MAP_OFFSET_X, p.getY() * tileSize + MAP_OFFSET_Y, tileSize, tileSize);
                 }
                 break;
         }
@@ -178,7 +170,8 @@ public class EditorScreen extends Screen {
         // Draw zoom level
         g.setFont(Config.gameFont);
         g.setColor(Color.BLACK);
-        g.drawString("Zoom: " + zoom.getValue(), MAP_OFFSET_X + 20, MAP_OFFSET_Y + MAP_VIEWPORT_SIZE + 60);
+        String zoomString = String.format("Zoom: %.4f", tileMap.getZoomLevel());
+        g.drawString(zoomString, MAP_OFFSET_X - 45, MAP_OFFSET_Y + MAP_VIEWPORT_SIZE + 60);
 
         // Draw buttons
         zoomInButton.render(g);
@@ -204,10 +197,10 @@ public class EditorScreen extends Screen {
 
                 g.setFont(Config.gameFont.deriveFont(16.0f));
 
-                t = tileMap.getTile(hoveredTileLocation.x, hoveredTileLocation.y);
-                BufferedImage image = Resources.getGraphicalResource(t.getImageName()).getImage();
-                g.drawImage(image, infoX, infoY);
-                g.drawString(t.getImageName(), infoX, infoY + 147);
+                Tile t = tileMap.getTile(hoveredTileLocation.x, hoveredTileLocation.y);
+                String flipBookName = t.getFlipBookName();
+                g.drawPage(tileMap.getTileMappingsWithDefaultZoom().get(flipBookName).getCurrentPage(), infoX, infoY);
+                g.drawString(flipBookName, infoX, infoY + 147);
                 g.drawString("(" + hoveredTileLocation.x + ", " + hoveredTileLocation.y + ")", infoX, infoY + 172);
             } catch (IndexOutOfBoundsException e) {
                 System.err.println("Trying to display info about an out-of-bounds tile!");
@@ -226,20 +219,18 @@ public class EditorScreen extends Screen {
     private boolean isMouseOverMap() {
         return mouseRelativeToMap.x - camera.getOffsetX() > 0
             && mouseRelativeToMap.y - camera.getOffsetY() > 0
-            && mouseRelativeToMap.x - camera.getOffsetX() < getTileSize() * tileMap.getWidth()
-            && mouseRelativeToMap.y - camera.getOffsetY() < getTileSize() * tileMap.getHeight();
-    }
-
-    private double getTileSize() {
-        return Resources.getGraphicalResource("grass.png").getWidth() * zoomLevels[zoom.getValue() - 1];
+            && mouseRelativeToMap.x - camera.getOffsetX() < tileMap.getTileSize() * tileMap.getWidth()
+            && mouseRelativeToMap.y - camera.getOffsetY() < tileMap.getTileSize() * tileMap.getHeight();
     }
     
     @Override
     public void update() {
+        tileMap.update();
+
         // Buttons
-        if (zoom.getValue() < zoomLevels.length)
+        if (tileMap.getZoomLevelIndex() < tileMap.getNumberOfZoomLevels()-1)
             zoomInButton.update();
-        if (zoom.getValue() > 1)
+        if (tileMap.getZoomLevelIndex() > 0)
             zoomOutButton.update();
         moveButton.update();
         paintButton.update();
@@ -260,8 +251,8 @@ public class EditorScreen extends Screen {
 
         mouseRelativeToMap.x = (Game.getMouseHandler().getX() - MAP_OFFSET_X);
         mouseRelativeToMap.y = (Game.getMouseHandler().getY() - MAP_OFFSET_Y);
-        hoveredTileLocation.x = (int) ((mouseRelativeToMap.x - camera.getOffsetX()) / (int) getTileSize());
-        hoveredTileLocation.y = (int) ((mouseRelativeToMap.y - camera.getOffsetY()) / (int) getTileSize());
+        hoveredTileLocation.x = (int) ((mouseRelativeToMap.x - camera.getOffsetX()) / (int) tileMap.getTileSize());
+        hoveredTileLocation.y = (int) ((mouseRelativeToMap.y - camera.getOffsetY()) / (int) tileMap.getTileSize());
 
         // TODO Replace conditional with polymorphism.
         switch (mode.getValue()) {
@@ -311,10 +302,10 @@ public class EditorScreen extends Screen {
                         if (wasMouseDownInViewport) {
                             // Just clicked up
                             if (paintSelection != null) {
-                                double x1 = (paintSelection.getX()) / getTileSize();
-                                double y1 = (paintSelection.getY()) / getTileSize();
-                                double x2 = (paintSelection.getX() + paintSelection.getWidth()) / getTileSize();
-                                double y2 = (paintSelection.getY() + paintSelection.getHeight()) / getTileSize();
+                                double x1 = (paintSelection.getX()) / tileMap.getTileSize();
+                                double y1 = (paintSelection.getY()) / tileMap.getTileSize();
+                                double x2 = (paintSelection.getX() + paintSelection.getWidth()) / tileMap.getTileSize();
+                                double y2 = (paintSelection.getY() + paintSelection.getHeight()) / tileMap.getTileSize();
 
                                 for (int i = (int) x1; i <= (int) x2; i++) {
                                     for (int j = (int) y1; j <= (int) y2; j++) {
@@ -335,23 +326,22 @@ public class EditorScreen extends Screen {
                 break;
         }
 
-        if (mode.getValue() == MODE_PAINT && paintTileIndex.getValue() >= 0) {
+        if (mode.getValue() == MODE_PAINT && paintTileName.length() > 0) {
             for (Point p : selectedTileLocations) {
-                String imageName = tileNames.get(paintTileIndex.getValue());
-                tileMap.getTile((int) p.getX(), (int) p.getY()).setImageName(imageName);
+                tileMap.getTile((int) p.getX(), (int) p.getY()).setFlipBookName(paintTileName.toString());
             }
-            paintTileIndex.setValue(-1);
+            paintTileName.delete(0, paintTileName.length());
         }
         
         if (readyToSave.isTrue()) {
             System.out.println("Saving...");
             Game.getWindow().setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
 
-            try (FileOutputStream out = new FileOutputStream("TileMapEditor/src/main/java/res/map.dat")) {
+            try (FileOutputStream out = new FileOutputStream(Config.projectResourcePath + "map.mtm")) {
                 OutputStreamWriter writer = new OutputStreamWriter(out);
 
                 // Write tile names to file.
-                for (String name : tileNames) {
+                for (String name : tileMap.getTileMappings().keySet()) {
                     writer.write(name + "\n");
                 }
                 writer.write(";\n");
@@ -365,8 +355,8 @@ public class EditorScreen extends Screen {
                 for (int i = 0; i < tileMap.getWidth(); i++) {
                     for (int j = 0; j < tileMap.getHeight(); j++) {
                         Tile t = tileMap.getTile(i, j);
-                        Integer count = occurranceMap.get(t.getImageName());
-                        occurranceMap.put(t.getImageName(), count == null ? 1 : count + 1);
+                        Integer count = occurranceMap.get(t.getFlipBookName());
+                        occurranceMap.put(t.getFlipBookName(), count == null ? 1 : count + 1);
                     }
                 }
                 String defaultTileName = "";
@@ -383,10 +373,10 @@ public class EditorScreen extends Screen {
                 for (int i = 0; i < tileMap.getWidth(); i++) {
                     for (int j = 0; j < tileMap.getHeight(); j++) {
                         Tile t = tileMap.getTile(i, j);
-                        if (t.getImageName().equals(defaultTileName))
+                        if (t.getFlipBookName().equals(defaultTileName))
                             continue;
                         writer.write('\n');
-                        writer.write(t.getImageName() + " " + i + " " + j);
+                        writer.write(t.getFlipBookName() + " " + i + " " + j);
                     }
                 }
 
@@ -407,8 +397,8 @@ public class EditorScreen extends Screen {
 
             // Sample all tile types.
             HashMap<String, Color> colorValues = new HashMap<>();
-            for (String name : tileNames) {
-                BufferedImage image = Resources.getGraphicalResource(name).getImage();
+            for (String name : tileMap.getTileMappings().keySet()) {
+                BufferedImage image = tileMap.getTileMappings().get(name).getCurrentPage().getImage();
                 int r = 0, g = 0, b = 0, count = 0;
                 for (int x = 0; x < image.getWidth(); x++) {
                     for (int y = 0; y < image.getHeight(); y++) {
@@ -430,12 +420,12 @@ public class EditorScreen extends Screen {
             for (int x = 0; x < width; x++) {
                 for (int y = 0; y < height; y++) {
                     Tile t = tileMap.getTile(x, y);
-                    map.setRGB(x, y, colorValues.get(t.getImageName()).getRGB());
+                    map.setRGB(x, y, colorValues.get(t.getFlipBookName()).getRGB());
                 }
             }
 
             try {
-                ImageIO.write(map, "png", new FileOutputStream("TileMapEditor/src/main/java/res/map.png"));
+                ImageIO.write(map, "png", new FileOutputStream(Config.projectResourcePath + "map.png"));
             } catch (IOException e) {
                 e.printStackTrace();
             }
