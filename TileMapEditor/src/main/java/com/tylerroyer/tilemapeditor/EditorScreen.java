@@ -127,10 +127,9 @@ public class EditorScreen extends Screen {
 
     @Override
     public void render(GameGraphics g) {
-        g.setCamera(camera);
-
         Rectangle viewportBounds = new Rectangle(MAP_OFFSET_X, MAP_OFFSET_Y, MAP_VIEWPORT_SIZE, MAP_VIEWPORT_SIZE);
         g.setClip(viewportBounds);
+        g.setCamera(camera);
 
         tileMap.render(g);
 
