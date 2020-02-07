@@ -8,7 +8,7 @@ standard files.
 The "map.dat" file currently looks like the following.  I know it's not the most efficient way of exporting the tile map, but as I said, I've
 only just been trying to get the app working.  In future updates, the layout will likely change, so bear with me.   
 1. The first section contains all of the needed file names.  This section is delimited with a ```\n``` character and ends with a ```;```.
-    * This section also contains whether or not the tile should be solid (denoted by the true or false after the name).
+    * This section also contains whether or not the tile should be solid (denoted by the ```true``` or ```false``` after the name).
 2. The next two numbers following the semicolon are the width and height of the tilemap respectively.
 3. The next line is the name of the "default tile."  This tile will fill the entire map and will be overwritten by the tiles that follow it.
 This will likely change in the future, but it was just a quick way to significantly decrease the size of map.dat.
