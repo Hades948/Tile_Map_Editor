@@ -1,14 +1,14 @@
-grass.mfb
-sand_water_ne.mfb
-sand_grass_ne.mfb
-sand_water_sw.mfb
-water.mfb
-sand_grass_nw.mfb
-sand_water_se.mfb
-sand_water_nw.mfb
-sand_grass_se.mfb
-sand_grass_sw.mfb
-sand.mfb
+grass.mfb false
+sand_water_ne.mfb false
+sand_grass_ne.mfb false
+sand_water_sw.mfb false
+water.mfb true
+sand_grass_nw.mfb false
+sand_water_se.mfb false
+sand_water_nw.mfb false
+sand_grass_se.mfb false
+sand_grass_sw.mfb false
+sand.mfb false
 ;
 256
 256

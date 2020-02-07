@@ -341,7 +341,7 @@ public class EditorScreen extends Screen {
 
                 // Write tile names to file.
                 for (String name : tileMap.getTileMappings().keySet()) {
-                    writer.write(name + "\n");
+                    writer.write(name + " " + tileMap.isTileSolid(name) + "\n");
                 }
                 writer.write(";\n");
 
